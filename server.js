@@ -1,28 +1,36 @@
 const express = require('express');
 const http = require('http');
+const path = require('path');
 const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.static('public'));
+// Statik dosyalar: __dirname kullanmak, çalışma dizininden bağımsız olarak doğru yolu verir
+app.use(express.static(path.join(__dirname, 'public')));
 
-const GRID_SIZE = 50;
-const grid = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill('#ffffff'));
-
-io.on('connection', (socket) => {
-    socket.emit('initGrid', grid);
-
-    socket.on('paintPixel', ({ x, y, color }) => {
-        if (x >= 0 && x < GRID_SIZE && y >= 0 && y < GRID_SIZE) {
-            grid[y][x] = color;
-            io.emit('updatePixel', { x, y, color });
-        }
-    });
+// Garanti olsun diye ana sayfayı açıkça tanımla
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+const SIZE = 50;
+const board = Array.from({ length: SIZE }, () => Array(SIZE).fill('#ffffff'));
+
+io.on('connection', (socket) => {
+  socket.emit('init', board);
+
+  socket.on('place', ({ x, y, color }) => {
+    if (x >= 0 && x < SIZE && y >= 0 && y < SIZE && typeof color === 'string') {
+      board[y][x] = color;
+      io.emit('update', { x, y, color });
+    }
+  });
+});
+
+// Render PORT'u ortam değişkeniyle verir; sabit port kullanma
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Sunucu ${PORT} portunda çalışıyor`);
 });
