@@ -6,98 +6,71 @@ const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: '*' }
-});
-
+const io = new Server(server);
 app.use(express.static(path.join(__dirname, 'public')));
-app.get('/', (_req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
-const DATA_DIR = path.join(__dirname, 'data');
-const BOARD_FILE = path.join(DATA_DIR, 'board.json');
+// A world canvas: one paintable pixel per degree of longitude/latitude.
+const WIDTH = 360;
+const HEIGHT = 180;
 const COOLDOWN_MS = 3000;
-const MAX_COORD = 1000000;
+const BOARD_FILE = path.join(__dirname, 'data', 'board.json');
 const board = new Map();
 
-function loadBoard() {
-  try {
-    const raw = fs.readFileSync(BOARD_FILE, 'utf8');
-    const parsed = JSON.parse(raw);
-    for (const [key, color] of Object.entries(parsed)) {
-      if (/^-?\d+,-?\d+$/.test(key) && /^#[0-9a-fA-F]{6}$/.test(color)) {
-        board.set(key, color.toLowerCase());
-      }
-    }
-    console.log(`Loaded ${board.size} painted pixels.`);
-  } catch (error) {
-    if (error.code !== 'ENOENT') {
-      console.error('Failed to load saved board:', error);
+try {
+  const saved = JSON.parse(fs.readFileSync(BOARD_FILE, 'utf8'));
+  for (const [key, color] of Object.entries(saved)) {
+    const match = /^(\d+),(\d+)$/.exec(key);
+    if (match && Number(match[1]) < WIDTH && Number(match[2]) < HEIGHT && /^#[0-9a-fA-F]{6}$/.test(color)) {
+      board.set(key, color.toLowerCase());
     }
   }
+  console.log(`Loaded ${board.size} world-map pixels.`);
+} catch (error) {
+  if (error.code !== 'ENOENT') console.error('Could not load board:', error);
 }
 
-let saveTimer = null;
+let saveTimer;
 function saveBoard() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     try {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+      fs.mkdirSync(path.dirname(BOARD_FILE), { recursive: true });
       const tempFile = `${BOARD_FILE}.tmp`;
       fs.writeFileSync(tempFile, JSON.stringify(Object.fromEntries(board)));
       fs.renameSync(tempFile, BOARD_FILE);
-      console.log('Board saved.');
     } catch (error) {
-      console.error('Failed to save board:', error);
+      console.error('Could not save board:', error);
     }
-  }, 500);
+  }, 400);
 }
-
-loadBoard();
 
 io.on('connection', (socket) => {
   socket.emit('init', Object.fromEntries(board));
-
-  socket.on('place', (pixel, callback) => {
-    const reply = typeof callback === 'function' ? callback : () => {};
-
-    if (!pixel || !Number.isInteger(pixel.x) || !Number.isInteger(pixel.y)) {
-      reply({ ok: false, error: 'Invalid pixel coordinates.' });
-      return;
-    }
-
-    if (Math.abs(pixel.x) > MAX_COORD || Math.abs(pixel.y) > MAX_COORD) {
-      reply({ ok: false, error: 'Coordinates out of range.' });
-      return;
-    }
-
-    if (typeof pixel.color !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(pixel.color)) {
-      reply({ ok: false, error: 'Invalid color.' });
+  socket.on('place', (pixel, acknowledge) => {
+    const reply = typeof acknowledge === 'function' ? acknowledge : () => {};
+    if (!pixel || !Number.isInteger(pixel.x) || !Number.isInteger(pixel.y) ||
+        pixel.x < 0 || pixel.x >= WIDTH || pixel.y < 0 || pixel.y >= HEIGHT ||
+        typeof pixel.color !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(pixel.color)) {
+      reply({ ok: false, error: 'Geçersiz harita konumu veya renk.' });
       return;
     }
 
     const now = Date.now();
-    const lastPaintAt = socket.data.lastPaintAt || 0;
-    const timeLeft = COOLDOWN_MS - (now - lastPaintAt);
-    if (timeLeft > 0) {
-      reply({ ok: false, wait: timeLeft });
+    const wait = COOLDOWN_MS - (now - (socket.data.lastPaintAt || 0));
+    if (wait > 0) {
+      reply({ ok: false, wait });
       return;
     }
 
     socket.data.lastPaintAt = now;
-
-    const normalizedColor = pixel.color.toLowerCase();
-    const key = `${pixel.x},${pixel.y}`;
-    board.set(key, normalizedColor);
-    io.emit('update', { x: pixel.x, y: pixel.y, color: normalizedColor });
+    const update = { x: pixel.x, y: pixel.y, color: pixel.color.toLowerCase() };
+    board.set(`${update.x},${update.y}`, update.color);
+    io.emit('update', update);
     saveBoard();
-
     reply({ ok: true, nextPaintAt: now + COOLDOWN_MS });
   });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Bonkistan is running on port ${PORT}`);
-});
+server.listen(PORT, '0.0.0.0', () => console.log(`Bonkistan world map is running on port ${PORT}`));
