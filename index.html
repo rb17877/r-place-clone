@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>r/place Clone</title>
+    <style>
+        body { display: flex; flex-direction: column; align-items: center; background: #222; color: #fff; font-family: sans-serif; margin-top: 20px; }
+        canvas { border: 2px solid #fff; cursor: crosshair; background: #fff; }
+        #palette { margin-top: 15px; display: flex; gap: 8px; }
+        .color-btn { width: 35px; height: 35px; border: 2px solid #fff; cursor: pointer; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>r/place Clone (50x50)</h1>
+    <canvas id="canvas" width="500" height="500"></canvas>
+    <div id="palette"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const GRID_SIZE = 50;
+        const CELL_SIZE = canvas.width / GRID_SIZE;
+        let selectedColor = '#ff0000';
+
+        const colors = ['#ffffff', '#000000', '#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
+        const paletteDiv = document.getElementById('palette');
+        colors.forEach(color => {
+            const btn = document.createElement('button');
+            btn.className = 'color-btn';
+            btn.style.backgroundColor = color;
+            btn.onclick = () => selectedColor = color;
+            paletteDiv.appendChild(btn);
+        });
+
+        let grid = [];
+
+        socket.on('initGrid', (serverGrid) => {
+            grid = serverGrid;
+            drawGrid();
+        });
+
+        socket.on('updatePixel', ({ x, y, color }) => {
+            grid[y][x] = color;
+            drawCell(x, y, color);
+        });
+
+        function drawGrid() {
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    drawCell(x, y, grid[y][x]);
+                }
+            }
+        }
+
+        function drawCell(x, y, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+        }
+
+        canvas.onclick = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
+            const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
+            socket.emit('paintPixel', { x, y, color: selectedColor });
+        };
+    </script>
+</body>
+</html>
