@@ -4,192 +4,102 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0b1220">
-  <meta name="description" content="Bonkistan — dünyanın ortak piksel haritası. Dünyayı birlikte boya.">
-  <title>Bonkistan — Dünya Piksel Haritası</title>
+  <meta name="description" content="Bonkistan — dünyanın ortak piksel haritası.">
+  <title>Bonkistan — Dünya Haritası</title>
   <style>
-    :root{color-scheme:dark;--bg:#0b1220;--surface:#121d2e;--surface2:#19263a;--line:#293952;--text:#eff5ff;--muted:#9cacc4;--lime:#b6f36b;--cyan:#68dce5;--shadow:0 20px 55px #03081270}
-    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 20% -10%,#193049 0,transparent 38%),var(--bg);color:var(--text);font:14px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}button{font:inherit;color:inherit}header{height:70px;padding:0 clamp(16px,4vw,54px);display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #293952a6;background:#0b1220d9}.brand{display:flex;align-items:center;gap:11px;font-size:21px;font-weight:850;letter-spacing:-.7px}.brand-mark{width:37px;height:37px;border-radius:12px;background:var(--lime);color:#15200c;display:grid;place-items:center;font-size:21px;box-shadow:0 5px 22px #b6f36b35}.brand-name span{color:var(--lime)}.live{display:flex;align-items:center;gap:9px;color:#c3d0e3;font-size:12px}.live-dot,.status-dot{width:8px;height:8px;background:var(--lime);border-radius:50%;box-shadow:0 0 11px #b6f36b8c}.page{width:min(1480px,100%);margin:0 auto;padding:27px clamp(13px,3vw,40px) 36px}.hero{display:flex;justify-content:space-between;align-items:end;gap:20px;margin-bottom:19px}.kicker{color:var(--lime);font-weight:800;letter-spacing:2px;font-size:10px;text-transform:uppercase}.hero h1{font-size:clamp(26px,3vw,38px);letter-spacing:-1.6px;line-height:1.1;margin:7px 0}.hero p{margin:0;color:var(--muted);font-size:14px}.stats{display:flex;gap:9px}.stat{padding:10px 14px;min-width:120px;border:1px solid var(--line);border-radius:12px;background:#121d2eaa}.stat strong{display:block;font-size:18px;line-height:1.2}.stat small{font-size:10px;color:var(--muted)}.layout{display:grid;grid-template-columns:minmax(0,1fr) 285px;gap:15px;align-items:start}.map-card,.card{border:1px solid var(--line);border-radius:15px;background:var(--surface);box-shadow:var(--shadow);overflow:hidden}.map-toolbar{height:51px;display:flex;align-items:center;justify-content:space-between;padding:0 15px;border-bottom:1px solid var(--line);gap:10px}.map-title{font-size:13px;font-weight:750}.map-title em{font-style:normal;color:var(--lime);margin-right:5px}.coordinates{font:11px ui-monospace,SFMono-Regular,Consolas,monospace;color:#aab8cd;white-space:nowrap}.map-wrap{height:min(68vh,680px);min-height:390px;position:relative;overflow:hidden;background:#102338;touch-action:none;cursor:grab}.map-wrap.dragging{cursor:grabbing}canvas{width:100%;height:100%;display:block}.map-foot{position:absolute;left:13px;bottom:12px;padding:7px 10px;border:1px solid #ffffff20;border-radius:8px;background:#0c1726d9;color:#cad5e5;font-size:10px;pointer-events:none}.zoom{position:absolute;right:12px;bottom:12px;display:flex;gap:5px}.zoom button{width:34px;height:34px;border:1px solid #43536b;border-radius:9px;background:#142236eF;color:#f0f5ff;font-size:19px;cursor:pointer}.zoom button:hover{border-color:var(--lime);color:var(--lime)}.sidebar{display:flex;flex-direction:column;gap:12px}.card{padding:16px}.card h2{margin:0 0 5px;font-size:14px;letter-spacing:-.2px}.muted{color:var(--muted);font-size:11px;line-height:1.55}.palette{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:14px 0 12px}.swatch{width:100%;aspect-ratio:1;border:2px solid #ffffff26;border-radius:9px;cursor:pointer;transition:transform .12s,border-color .12s}.swatch:hover{transform:scale(1.07)}.swatch.selected{border-color:white;box-shadow:0 0 0 2px var(--lime)}.custom{height:39px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border:1px solid var(--line);border-radius:9px;background:var(--surface2);color:#c3cee0;font-size:11px}.custom input{height:27px;width:34px;border:0;padding:0;background:none;cursor:pointer}.paint-status{margin-top:11px;padding:10px;border:1px solid #ffffff0b;border-radius:9px;background:#0e1725}.status-line{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:#c6d1e1}.status-line strong{color:var(--lime)}.progress{height:4px;margin-top:8px;border-radius:9px;background:#334157;overflow:hidden}.progress div{height:100%;width:0;background:linear-gradient(90deg,var(--lime),var(--cyan));transition:width .15s}.help{margin-top:13px;padding-top:11px;border-top:1px solid var(--line);display:grid;gap:8px;color:var(--muted);font-size:10px}.help b{color:#e5edf8}.help span:first-child{margin-right:5px}.connection{display:flex;align-items:center;gap:8px;margin-top:2px;padding:3px 4px;color:var(--muted);font-size:10px}.connection .status-dot{background:#e8b451;box-shadow:none}.connection.connected .status-dot{background:var(--lime);box-shadow:0 0 10px #b6f36b80}.toast{position:fixed;left:50%;bottom:22px;z-index:5;transform:translate(-50%,14px);opacity:0;pointer-events:none;padding:10px 14px;border:1px solid #43536b;border-radius:10px;background:#19263a;color:var(--text);box-shadow:var(--shadow);font-size:12px;transition:.18s}.toast.show{opacity:1;transform:translate(-50%,0)}
-    @media(max-width:850px){.layout{grid-template-columns:1fr}.sidebar{display:grid;grid-template-columns:1fr 1fr}.connection{grid-column:1/-1}.map-wrap{height:58vh;min-height:360px}.hero{align-items:flex-start;flex-direction:column}.stats{width:100%}.stat{flex:1}}
-    @media(max-width:560px){header{height:62px;padding:0 14px}.brand{font-size:19px}.page{padding:19px 11px 26px}.hero{gap:13px}.hero p{font-size:12px}.stat{min-width:0;padding:9px 10px}.stat strong{font-size:16px}.layout{gap:11px}.map-toolbar{height:45px;padding:0 10px}.map-title{font-size:11px}.coordinates{font-size:9px}.map-wrap{height:54vh;min-height:310px}.sidebar{grid-template-columns:1fr}.connection{grid-column:auto}.live{font-size:10px}}
+    :root{color-scheme:dark;--bg:#0b1220;--panel:#121d2e;--panel2:#19263a;--line:#293952;--text:#eff5ff;--muted:#9cacc4;--lime:#b6f36b;--cyan:#68dce5}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 18% -10%,#193049 0,transparent 38%),var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}button{font:inherit;color:inherit}header{height:68px;padding:0 clamp(14px,4vw,48px);display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);background:#0b1220e8}.brand{display:flex;align-items:center;gap:11px;font-size:21px;font-weight:850;letter-spacing:-.7px}.brand-icon{width:37px;height:37px;border-radius:12px;background:var(--lime);color:#15200c;display:grid;place-items:center;font-size:21px}.brand span{color:var(--lime)}.live{display:flex;align-items:center;gap:8px;color:#c3d0e3;font-size:12px}.live i,.conn-dot{width:8px;height:8px;border-radius:50%;background:var(--lime);box-shadow:0 0 11px #b6f36b88}.page{width:min(1480px,100%);margin:auto;padding:25px clamp(12px,3vw,38px) 32px}.hero{display:flex;justify-content:space-between;align-items:end;gap:18px;margin-bottom:17px}.kicker{color:var(--lime);font-weight:800;letter-spacing:1.8px;font-size:10px;text-transform:uppercase}.hero h1{font-size:clamp(26px,3vw,37px);letter-spacing:-1.5px;line-height:1.12;margin:7px 0}.hero p{margin:0;color:var(--muted);font-size:13px}.stats{display:flex;gap:8px}.stat{padding:9px 13px;min-width:115px;border:1px solid var(--line);border-radius:11px;background:var(--panel)}.stat strong{display:block;font-size:18px}.stat small{font-size:10px;color:var(--muted)}.layout{display:grid;grid-template-columns:minmax(0,1fr) 278px;gap:14px;align-items:start}.map-card,.card{border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden}.map-toolbar{height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-bottom:1px solid var(--line);gap:10px}.map-title{font-size:12px;font-weight:750}.map-title b{color:var(--lime);margin-right:6px}.coordinates{font:10px ui-monospace,monospace;color:#adbbcf;white-space:nowrap}.map-wrap{height:min(68vh,680px);min-height:360px;position:relative;overflow:hidden;background:#102338;touch-action:none;cursor:grab}.map-wrap.dragging{cursor:grabbing}canvas{width:100%;height:100%;display:block}.map-foot{position:absolute;left:12px;bottom:11px;padding:7px 9px;border:1px solid #ffffff20;border-radius:8px;background:#0c1726dd;color:#cad5e5;font-size:10px;pointer-events:none}.zoom{position:absolute;right:11px;bottom:11px;display:flex;gap:5px}.zoom button{width:34px;height:34px;border:1px solid #43536b;border-radius:9px;background:#142236ed;font-size:18px;cursor:pointer}.zoom button:hover{border-color:var(--lime);color:var(--lime)}.sidebar{display:flex;flex-direction:column;gap:11px}.card{padding:15px}.card h2{margin:0 0 5px;font-size:14px}.muted{color:var(--muted);font-size:11px;line-height:1.55}.palette{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:13px 0 11px}.swatch{aspect-ratio:1;border:2px solid #ffffff26;border-radius:9px;cursor:pointer}.swatch:hover{transform:scale(1.06)}.swatch.selected{border-color:white;box-shadow:0 0 0 2px var(--lime)}.custom{height:38px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);color:#c3cee0;font-size:11px}.custom input{height:27px;width:34px;border:0;padding:0;background:none;cursor:pointer}.paint-status{margin-top:10px;padding:10px;border-radius:9px;background:#0e1725}.status-line{display:flex;justify-content:space-between;font-size:11px;color:#c6d1e1}.status-line strong{color:var(--lime)}.progress{height:4px;margin-top:8px;border-radius:8px;background:#334157;overflow:hidden}.progress div{height:100%;width:0;background:linear-gradient(90deg,var(--lime),var(--cyan))}.help{margin-top:12px;padding-top:10px;border-top:1px solid var(--line);display:grid;gap:7px;color:var(--muted);font-size:10px}.help b{color:#e5edf8}.connection{display:flex;align-items:center;gap:8px;padding:3px;color:var(--muted);font-size:10px}.connection .conn-dot{background:#e8b451;box-shadow:none}.connection.connected .conn-dot{background:var(--lime);box-shadow:0 0 10px #b6f36b80}.toast{position:fixed;left:50%;bottom:20px;z-index:5;transform:translate(-50%,12px);opacity:0;pointer-events:none;padding:10px 14px;border:1px solid #43536b;border-radius:10px;background:#19263a;color:var(--text);font-size:12px;transition:.18s}.toast.show{opacity:1;transform:translate(-50%,0)}
+    @media(max-width:850px){.layout{grid-template-columns:1fr}.sidebar{display:grid;grid-template-columns:1fr 1fr}.connection{grid-column:1/-1}.map-wrap{height:57vh;min-height:340px}.hero{align-items:flex-start;flex-direction:column}.stats{width:100%}.stat{flex:1}}
+    @media(max-width:560px){header{height:61px;padding:0 13px}.brand{font-size:19px}.page{padding:18px 10px 24px}.hero p{font-size:12px}.stat{min-width:0;padding:8px 10px}.stat strong{font-size:16px}.map-toolbar{height:43px;padding:0 9px}.map-title{font-size:10px}.coordinates{font-size:9px}.map-wrap{height:52vh;min-height:300px}.sidebar{grid-template-columns:1fr}.connection{grid-column:auto}.live{font-size:10px}}
   </style>
 </head>
 <body>
-  <header>
-    <div class="brand"><div class="brand-mark">✦</div><div class="brand-name">bonki<span>stan</span></div></div>
-    <div class="live"><i class="live-dot"></i><span>Canlı dünya haritası</span></div>
-  </header>
+  <header><div class="brand"><div class="brand-icon">✦</div><div>bonki<span>stan</span></div></div><div class="live"><i></i><span>Canlı dünya haritası</span></div></header>
   <main class="page">
-    <section class="hero">
-      <div><div class="kicker">Herkesin tuvali, dünyanın haritası</div><h1>Bonkistan Dünya Haritası</h1><p>Dünyada bir nokta seç, rengini bırak. Haritayı birlikte oluşturalım.</p></div>
-      <div class="stats"><div class="stat"><strong id="pixelCount">0</strong><small>boyanmış piksel</small></div><div class="stat"><strong>360 × 180</strong><small>dünya koordinatı</small></div></div>
-    </section>
+    <section class="hero"><div><div class="kicker">Herkesin tuvali, dünyanın haritası</div><h1>Bonkistan Dünya Haritası</h1><p>Dünyada bir nokta seç, rengini bırak. Haritayı birlikte oluşturalım.</p></div><div class="stats"><div class="stat"><strong id="pixelCount">0</strong><small>boyanmış piksel</small></div><div class="stat"><strong>360 × 180</strong><small>dünya koordinatı</small></div></div></section>
     <section class="layout">
-      <div class="map-card">
-        <div class="map-toolbar"><div class="map-title"><em>●</em>DÜNYA HARİTASI <span style="color:#96a8c0;font-weight:500">· 1 piksel ≈ 1°</span></div><div class="coordinates" id="coordinates">Boylam 0° · Enlem 0°</div></div>
-        <div class="map-wrap" id="mapWrap"><canvas id="mapCanvas" aria-label="Bonkistan dünya piksel haritası"></canvas><div class="map-foot">Sürükle: gezin &nbsp;·&nbsp; Tekerlek: yakınlaş &nbsp;·&nbsp; Tıkla: boya</div><div class="zoom"><button id="zoomOut" aria-label="Uzaklaştır">−</button><button id="zoomIn" aria-label="Yakınlaştır">+</button><button id="resetView" aria-label="Dünya haritasını ortala">⌖</button></div></div>
-      </div>
-      <aside class="sidebar">
-        <section class="card"><h2>Rengini seç</h2><div class="muted">Rengini belirle, sonra haritada istediğin kareye tıkla.</div><div class="palette" id="palette"></div><label class="custom"><span>Özel renk</span><input id="customColor" type="color" value="#b6f36b" aria-label="Özel renk seç"></label><div class="paint-status"><div class="status-line"><span id="statusText">Boyamaya hazırsın</span><strong id="timerText">Hazır</strong></div><div class="progress"><div id="progressBar"></div></div></div><div class="help"><div><span>🎨</span><b>3 saniyede bir piksel</b> — rahat rahat boya.</div><div><span>🌍</span><b>Tüm dünya</b> — kıtaları yakınlaştırıp keşfet.</div><div><span>💾</span><b>Kalıcı eser</b> — boyamalar sunucuda saklanır.</div></div></section>
-        <section class="card"><h2>Harita nasıl çalışır?</h2><div class="muted">Harita ilk açılışta tüm dünyayı gösterir. Yakınlaştırıp bir piksel seçebilir, sürükleyerek başka bölgelere gidebilirsin. Herkes aynı haritayı canlı görür.</div></section>
-        <div id="connection" class="connection"><i class="status-dot"></i><span>Sunucuya bağlanılıyor…</span></div>
-      </aside>
+      <div class="map-card"><div class="map-toolbar"><div class="map-title"><b>●</b>DÜNYA HARİTASI <span style="color:#96a8c0;font-weight:500">· 1 piksel ≈ 1°</span></div><div class="coordinates" id="coordinates">Boylam 0° · Enlem 0°</div></div><div class="map-wrap" id="mapWrap"><canvas id="mapCanvas" aria-label="Bonkistan dünya piksel haritası"></canvas><div class="map-foot">Sürükle: gezin · Tekerlek: yakınlaş · Tıkla: boya</div><div class="zoom"><button id="zoomOut" aria-label="Uzaklaştır">−</button><button id="zoomIn" aria-label="Yakınlaştır">+</button><button id="resetView" aria-label="Haritayı ortala">⌖</button></div></div></div>
+      <aside class="sidebar"><section class="card"><h2>Rengini seç</h2><div class="muted">Rengini belirle, sonra haritada istediğin kareye tıkla.</div><div class="palette" id="palette"></div><label class="custom"><span>Özel renk</span><input id="customColor" type="color" value="#b6f36b" aria-label="Özel renk seç"></label><div class="paint-status"><div class="status-line"><span id="statusText">Boyamaya hazırsın</span><strong id="timerText">Hazır</strong></div><div class="progress"><div id="progressBar"></div></div></div><div class="help"><div>🎨 <b>3 saniyede bir piksel</b> — rahat rahat boya.</div><div>🌍 <b>Tüm dünya</b> — kıtaları yakınlaştırıp keşfet.</div><div>💾 <b>Kalıcı eser</b> — boyamalar sunucuda saklanır.</div></div></section><section class="card"><h2>Nasıl kullanılır?</h2><div class="muted">Harita ilk açılışta tüm dünyayı gösterir. Yakınlaştırıp bir piksel seçebilir, sürükleyerek başka bölgelere gidebilirsin. Herkes aynı haritayı canlı görür.</div></section><div id="connection" class="connection"><i class="conn-dot"></i><span>Sunucuya bağlanılıyor…</span></div></aside>
     </section>
-  </main>
-  <div id="toast" class="toast"></div>
+  </main><div id="toast" class="toast"></div>
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    (() => {
-      const socket = io();
-      const canvas = document.getElementById('mapCanvas');
-      const ctx = canvas.getContext('2d');
-      const wrap = document.getElementById('mapWrap');
-      const palette = ['#ffffff','#151a23','#e64b45','#ff9138','#ffd34d','#b6f36b','#37c879','#2ac5c0','#3985ff','#6654e8','#ab78f5','#ef70c4','#87583c','#9ba8b7','#586477'];
-      const pixels = new Map();
-      let selectedColor = '#b6f36b';
-      let scale = 1, offsetX = 0, offsetY = 0;
-      let dragging = false, didMove = false, lastPointer = null;
-      let nextPaintAt = 0, toastTimer;
+  (() => {
+    'use strict';
+    const socket = io();
+    const canvas = document.getElementById('mapCanvas');
+    const ctx = canvas.getContext('2d');
+    const wrap = document.getElementById('mapWrap');
+    const palette = ['#ffffff','#151a23','#e64b45','#ff9138','#ffd34d','#b6f36b','#37c879','#2ac5c0','#3985ff','#6654e8','#ab78f5','#ef70c4','#87583c','#9ba8b7','#586477'];
+    const pixels = new Map();
+    let selectedColor = '#b6f36b', scale = 1, offsetX = 0, offsetY = 0;
+    let dragging = false, didMove = false, lastPointer = null, nextPaintAt = 0, toastTimer;
 
-      // Simplified but recognizable world outlines in longitude/latitude coordinates.
-      const land = [
-        [[-168,70],[-150,72],[-137,69],[-130,58],[-124,50],[-124,42],[-117,32],[-108,26],[-97,18],[-90,19],[-84,24],[-80,25],[-78,32],[-73,40],[-66,45],[-60,51],[-58,57],[-70,60],[-82,64],[-91,69],[-106,73],[-125,74],[-145,72]],
-        [[-81,12],[-74,11],[-67,9],[-60,7],[-52,2],[-48,-5],[-51,-14],[-54,-22],[-58,-30],[-62,-38],[-68,-55],[-73,-48],[-75,-35],[-78,-20]],
-        [[-52,60],[-44,59],[-36,64],[-39,72],[-47,82],[-58,83],[-65,77],[-62,68]],
-        [[-11,36],[-9,44],[-5,50],[2,51],[5,56],[14,55],[20,60],[29,60],[36,56],[47,58],[59,55],[70,58],[81,61],[91,59],[102,55],[113,54],[124,51],[133,47],[141,43],[150,47],[159,54],[171,60],[179,55],[170,48],[160,43],[150,38],[143,34],[135,34],[130,31],[123,24],[117,18],[110,18],[108,10],[104,2],[100,5],[96,10],[91,21],[85,22],[80,9],[75,8],[72,20],[68,24],[60,25],[57,17],[50,13],[44,12],[42,5],[47,-1],[44,-12],[40,-18],[34,-25],[28,-34],[20,-35],[17,-29],[12,-18],[10,-5],[6,4],[2,6],[-4,5],[-9,10]],
-        [[-17,37],[-5,36],[10,37],[20,33],[33,31],[39,20],[43,12],[50,10],[48,2],[42,-4],[40,-12],[35,-20],[32,-29],[25,-34],[18,-35],[12,-28],[9,-16],[5,-5],[1,5],[-5,5],[-10,12],[-15,18],[-17,27]],
-        [[112,-11],[128,-12],[137,-16],[145,-20],[153,-27],[151,-35],[145,-39],[137,-35],[130,-33],[122,-27],[115,-22]],
-        [[130,31],[135,34],[141,42],[145,44],[146,39],[141,34],[137,33]],
-        [[47,-13],[50,-16],[49,-25],[46,-25],[44,-18]],
-        [[-8,58],[-5,59],[-3,56],[-5,51],[-8,54]],
-        [[-24,64],[-19,64],[-20,66],[-23,67]]
-      ];
-      const labels = [['NORTH AMERICA',72,45],['SOUTH AMERICA',108,116],['EUROPE',186,52],['AFRICA',198,112],['ASIA',250,58],['AUSTRALIA',312,137]];
-      const toMap = (lon, lat) => [lon + 180, 90 - lat];
+    // Simplified world silhouettes in longitude/latitude coordinates.
+    const land = [
+      [[-168,70],[-150,72],[-137,69],[-130,58],[-124,50],[-124,42],[-117,32],[-108,26],[-97,18],[-90,19],[-84,24],[-80,25],[-78,32],[-73,40],[-66,45],[-60,51],[-58,57],[-70,60],[-82,64],[-91,69],[-106,73],[-125,74],[-145,72]],
+      [[-81,12],[-74,11],[-67,9],[-60,7],[-52,2],[-48,-5],[-51,-14],[-54,-22],[-58,-30],[-62,-38],[-68,-55],[-73,-48],[-75,-35],[-78,-20]],
+      [[-52,60],[-44,59],[-36,64],[-39,72],[-47,82],[-58,83],[-65,77],[-62,68]],
+      [[-11,36],[-9,44],[-5,50],[2,51],[5,56],[14,55],[20,60],[29,60],[36,56],[47,58],[59,55],[70,58],[81,61],[91,59],[102,55],[113,54],[124,51],[133,47],[141,43],[150,47],[159,54],[171,60],[179,55],[170,48],[160,43],[150,38],[143,34],[135,34],[130,31],[123,24],[117,18],[110,18],[108,10],[104,2],[100,5],[96,10],[91,21],[85,22],[80,9],[75,8],[72,20],[68,24],[60,25],[57,17],[50,13],[44,12],[42,5],[47,-1],[44,-12],[40,-18],[34,-25],[28,-34],[20,-35],[17,-29],[12,-18],[10,-5],[6,4],[2,6],[-4,5],[-9,10]],
+      [[-17,37],[-5,36],[10,37],[20,33],[33,31],[39,20],[43,12],[50,10],[48,2],[42,-4],[40,-12],[35,-20],[32,-29],[25,-34],[18,-35],[12,-28],[9,-16],[5,-5],[1,5],[-5,5],[-10,12],[-15,18],[-17,27]],
+      [[112,-11],[128,-12],[137,-16],[145,-20],[153,-27],[151,-35],[145,-39],[137,-35],[130,-33],[122,-27],[115,-22]],
+      [[130,31],[135,34],[141,42],[145,44],[146,39],[141,34],[137,33]],
+      [[47,-13],[50,-16],[49,-25],[46,-25],[44,-18]],
+      [[-8,58],[-5,59],[-3,56],[-5,51],[-8,54]],
+      [[-24,64],[-19,64],[-20,66],[-23,67]]
+    ];
+    const labels = [['NORTH AMERICA',72,45],['SOUTH AMERICA',108,116],['EUROPE',186,52],['AFRICA',198,112],['ASIA',250,58],['AUSTRALIA',312,137]];
+    const project = (lon, lat) => [lon + 180, 90 - lat];
 
-      function draw() {
-        const w = wrap.clientWidth, h = wrap.clientHeight;
-        ctx.clearRect(0, 0, w, h);
-        ctx.fillStyle = '#102338'; ctx.fillRect(0, 0, w, h);
-        ctx.save(); ctx.translate(offsetX, offsetY); ctx.scale(scale, scale);
-        // Latitude/longitude lines are subtle at world view, clear when zoomed in.
-        ctx.strokeStyle = scale > 4 ? 'rgba(177,211,230,.18)' : 'rgba(177,211,230,.09)';
-        ctx.lineWidth = 1 / scale;
-        for (let lon = 0; lon <= 360; lon += 30) { ctx.beginPath(); ctx.moveTo(lon, 0); ctx.lineTo(lon, 180); ctx.stroke(); }
-        for (let lat = 0; lat <= 180; lat += 30) { ctx.beginPath(); ctx.moveTo(0, lat); ctx.lineTo(360, lat); ctx.stroke(); }
-        ctx.fillStyle = '#427f70'; ctx.strokeStyle = '#76b399'; ctx.lineWidth = 0.8 / scale;
-        for (const polygon of land) {
-          ctx.beginPath();
-          polygon.forEach(([lon, lat], index) => { const [x,y] = toMap(lon,lat); if(index===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); });
-          ctx.closePath(); ctx.fill(); ctx.stroke();
-        }
-        if (scale >= 1.25) {
-          ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = `${Math.max(2.2, 4 / scale)}px system-ui`;
-          ctx.fillStyle = 'rgba(232,246,242,.52)';
-          for (const [name,x,y] of labels) ctx.fillText(name,x,y);
-        }
-        for (const [key, color] of pixels) {
-          const comma = key.indexOf(','), x = Number(key.slice(0, comma)), y = Number(key.slice(comma + 1));
-          const px = offsetX + x * scale, py = offsetY + y * scale;
-          if (px + scale < 0 || py + scale < 0 || px > w || py > h) continue;
-          ctx.fillStyle = color; ctx.fillRect(x, y, 1, 1);
-        }
-        if (scale >= 7) {
-          ctx.strokeStyle = 'rgba(245,250,255,.21)'; ctx.lineWidth = 1 / scale; ctx.beginPath();
-          for (let x=0;x<=360;x++) { ctx.moveTo(x,0);ctx.lineTo(x,180); }
-          for (let y=0;y<=180;y++) { ctx.moveTo(0,y);ctx.lineTo(360,y); }
-          ctx.stroke();
-        }
-        ctx.restore();
-        document.getElementById('pixelCount').textContent = pixels.size.toLocaleString('tr-TR');
+    function draw() {
+      const width = wrap.clientWidth, height = wrap.clientHeight;
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = '#102338'; ctx.fillRect(0, 0, width, height);
+      ctx.save(); ctx.translate(offsetX, offsetY); ctx.scale(scale, scale);
+      ctx.strokeStyle = scale > 4 ? 'rgba(177,211,230,.18)' : 'rgba(177,211,230,.11)'; ctx.lineWidth = 1 / scale;
+      for (let x=0;x<=360;x+=30) { ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,180);ctx.stroke(); }
+      for (let y=0;y<=180;y+=30) { ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(360,y);ctx.stroke(); }
+      ctx.fillStyle='#427f70';ctx.strokeStyle='#76b399';ctx.lineWidth=.8/scale;
+      for (const polygon of land) {
+        ctx.beginPath();
+        polygon.forEach(([lon,lat],i)=>{const [x,y]=project(lon,lat);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+        ctx.closePath();ctx.fill();ctx.stroke();
       }
-      function fitWorld() {
-        const w = wrap.clientWidth, h = wrap.clientHeight;
-        scale = Math.min(w / 360, h / 180);
-        offsetX = (w - 360 * scale) / 2; offsetY = (h - 180 * scale) / 2;
-        draw();
-      }
-      function resize() {
-        const dpr = Math.min(window.devicePixelRatio || 1, 2), rect = wrap.getBoundingClientRect();
-        canvas.width = Math.max(1, Math.round(rect.width * dpr)); canvas.height = Math.max(1, Math.round(rect.height * dpr));
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0); fitWorld();
-      }
-      function worldAt(clientX, clientY) {
-        const rect = wrap.getBoundingClientRect();
-        return { x: Math.floor((clientX - rect.left - offsetX) / scale), y: Math.floor((clientY - rect.top - offsetY) / scale) };
-      }
-      function updateCoordinates(p) {
-        const lon = p.x - 180, lat = 90 - p.y;
-        document.getElementById('coordinates').textContent = `Boylam ${lon}° · Enlem ${lat}°`;
-      }
-      function toast(message) {
-        const el = document.getElementById('toast'); el.textContent = message; el.classList.add('show');
-        clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 2100);
-      }
-      function selectColor(value) {
-        selectedColor = value.toLowerCase(); document.getElementById('customColor').value = selectedColor;
-        document.querySelectorAll('.swatch').forEach(button => button.classList.toggle('selected', button.dataset.color === selectedColor));
-      }
-      for (const value of palette) {
-        const button = document.createElement('button'); button.type = 'button'; button.className = 'swatch';
-        button.dataset.color = value; button.style.background = value; button.title = value; button.setAttribute('aria-label', `${value} rengini seç`);
-        button.addEventListener('click', () => selectColor(value)); document.getElementById('palette').appendChild(button);
-      }
-      selectColor(selectedColor);
-      document.getElementById('customColor').addEventListener('input', event => selectColor(event.target.value));
-      function tick() {
-        const remaining = Math.max(0, nextPaintAt - Date.now());
-        document.getElementById('timerText').textContent = remaining ? `${(remaining / 1000).toFixed(1)} sn` : 'Hazır';
-        document.getElementById('statusText').textContent = remaining ? 'Sıradaki piksel için bekle' : 'Boyamaya hazırsın';
-        document.getElementById('progressBar').style.width = `${100 - remaining / 30}%`;
-      }
-      function paint(p) {
-        if (p.x < 0 || p.x >= 360 || p.y < 0 || p.y >= 180) { toast('Harita dışındaki alan boyanamaz.'); return; }
-        if (!socket.connected) { toast('Sunucuya bağlantı kuruluyor…'); return; }
-        if (Date.now() < nextPaintAt) { toast('Yeni piksel için kısa bir süre bekle.'); return; }
-        socket.emit('place', { ...p, color: selectedColor }, response => {
-          if (!response || !response.ok) {
-            if (response && response.wait) nextPaintAt = Date.now() + response.wait;
-            toast(response && response.error ? response.error : 'Piksel yerleştirilemedi.'); tick(); return;
-          }
-          nextPaintAt = response.nextPaintAt; tick();
-        });
-      }
-      function zoomAt(factor, cx, cy) {
-        const oldScale = scale; scale = Math.max(1, Math.min(42, scale * factor));
-        offsetX = cx - (cx - offsetX) * (scale / oldScale); offsetY = cy - (cy - offsetY) * (scale / oldScale); draw();
-      }
-      wrap.addEventListener('pointerdown', event => {
-        if (event.target.closest('.zoom')) return;
-        dragging = true; didMove = false; lastPointer = { x: event.clientX, y: event.clientY };
-        wrap.classList.add('dragging'); wrap.setPointerCapture(event.pointerId);
-      });
-      wrap.addEventListener('pointermove', event => {
-        const p = worldAt(event.clientX, event.clientY); updateCoordinates(p);
-        if (!dragging || !lastPointer) return;
-        const dx = event.clientX - lastPointer.x, dy = event.clientY - lastPointer.y;
-        if (Math.abs(dx) + Math.abs(dy) > 2) didMove = true;
-        offsetX += dx; offsetY += dy; lastPointer = { x: event.clientX, y: event.clientY }; draw();
-      });
-      function finishPointer(event) {
-        if (!dragging) return;
-        if (!didMove) { const p = worldAt(event.clientX, event.clientY); paint(p); }
-        dragging = false; lastPointer = null; wrap.classList.remove('dragging');
-      }
-      wrap.addEventListener('pointerup', finishPointer);
-      wrap.addEventListener('pointercancel', () => { dragging = false; lastPointer = null; wrap.classList.remove('dragging'); });
-      wrap.addEventListener('wheel', event => {
-        event.preventDefault(); const rect = wrap.getBoundingClientRect();
-        zoomAt(event.deltaY < 0 ? 1.16 : 0.86, event.clientX - rect.left, event.clientY - rect.top);
-      }, { passive: false });
-      document.getElementById('zoomIn').addEventListener('click', () => zoomAt(1.3, wrap.clientWidth / 2, wrap.clientHeight / 2));
-      document.getElementById('zoomOut').addEventListener('click', () => zoomAt(0.77, wrap.clientWidth / 2, wrap.clientHeight / 2));
-      document.getElementById('resetView').addEventListener('click', fitWorld);
-      socket.on('init', saved => { pixels.clear(); for (const [key, value] of Object.entries(saved || {})) pixels.set(key, value); draw(); });
-      socket.on('update', pixel => { pixels.set(`${pixel.x},${pixel.y}`, pixel.color); draw(); });
-      socket.on('connect', () => { const el = document.getElementById('connection'); el.classList.add('connected'); el.lastElementChild.textContent = 'Sunucuya bağlı'; });
-      socket.on('disconnect', () => { const el = document.getElementById('connection'); el.classList.remove('connected'); el.lastElementChild.textContent = 'Bağlantı kesildi, tekrar deneniyor…'; });
-      resize(); setInterval(tick, 200); window.addEventListener('resize', resize);
-    })();
+      if(scale>=1.25){ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`${Math.max(2.4,4/scale)}px system-ui`;ctx.fillStyle='rgba(232,246,242,.62)';for(const [name,x,y] of labels)ctx.fillText(name,x,y);}
+      // Draw pixels in world coordinates while the map transform is active.
+      for(const [key,color] of pixels){const comma=key.indexOf(','),x=Number(key.slice(0,comma)),y=Number(key.slice(comma+1));const sx=offsetX+x*scale,sy=offsetY+y*scale;if(sx+scale<0||sy+scale<0||sx>width||sy>height)continue;ctx.fillStyle=color;ctx.fillRect(x,y,1,1);}
+      if(scale>=7){ctx.strokeStyle='rgba(245,250,255,.2)';ctx.lineWidth=1/scale;ctx.beginPath();for(let x=0;x<=360;x++){ctx.moveTo(x,0);ctx.lineTo(x,180)}for(let y=0;y<=180;y++){ctx.moveTo(0,y);ctx.lineTo(360,y)}ctx.stroke();}
+      ctx.restore();
+      document.getElementById('pixelCount').textContent=pixels.size.toLocaleString('tr-TR');
+    }
+    function fitWorld(){const width=wrap.clientWidth,height=wrap.clientHeight;scale=Math.min(width/360,height/180);offsetX=(width-360*scale)/2;offsetY=(height-180*scale)/2;draw();}
+    function resize(){const dpr=Math.min(window.devicePixelRatio||1,2),rect=wrap.getBoundingClientRect();canvas.width=Math.max(1,Math.round(rect.width*dpr));canvas.height=Math.max(1,Math.round(rect.height*dpr));ctx.setTransform(dpr,0,0,dpr,0,0);fitWorld();}
+    function worldAt(clientX,clientY){const rect=wrap.getBoundingClientRect();return{x:Math.floor((clientX-rect.left-offsetX)/scale),y:Math.floor((clientY-rect.top-offsetY)/scale)};}
+    function updateCoords(p){document.getElementById('coordinates').textContent=`Boylam ${p.x-180}° · Enlem ${90-p.y}°`;}
+    function showToast(message){const el=document.getElementById('toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2100);}
+    function chooseColor(value){selectedColor=value.toLowerCase();document.getElementById('customColor').value=selectedColor;document.querySelectorAll('.swatch').forEach(button=>button.classList.toggle('selected',button.dataset.color===selectedColor));}
+    const paletteNode=document.getElementById('palette');
+    for(const value of palette){const button=document.createElement('button');button.type='button';button.className='swatch';button.dataset.color=value;button.style.background=value;button.title=value;button.setAttribute('aria-label',`${value} rengini seç`);button.addEventListener('click',()=>chooseColor(value));paletteNode.appendChild(button);}
+    chooseColor(selectedColor);
+    document.getElementById('customColor').addEventListener('input',event=>chooseColor(event.target.value));
+    function updateTimer(){const remaining=Math.max(0,nextPaintAt-Date.now());document.getElementById('timerText').textContent=remaining?`${(remaining/1000).toFixed(1)} sn`:'Hazır';document.getElementById('statusText').textContent=remaining?'Sıradaki piksel için bekle':'Boyamaya hazırsın';document.getElementById('progressBar').style.width=`${100-remaining/30}%`;}
+    function paint(point){if(point.x<0||point.x>=360||point.y<0||point.y>=180){showToast('Harita dışındaki alan boyanamaz.');return;}if(!socket.connected){showToast('Sunucuya bağlantı kuruluyor…');return;}if(Date.now()<nextPaintAt){showToast('Yeni piksel için kısa bir süre bekle.');return;}socket.emit('place',{...point,color:selectedColor},response=>{if(!response||!response.ok){if(response&&response.wait)nextPaintAt=Date.now()+response.wait;showToast(response&&response.error?response.error:'Piksel yerleştirilemedi.');updateTimer();return;}nextPaintAt=response.nextPaintAt||Date.now()+3000;updateTimer();});}
+    function zoomAt(factor,x,y){const previous=scale;scale=Math.max(.65,Math.min(42,scale*factor));offsetX=x-(x-offsetX)*(scale/previous);offsetY=y-(y-offsetY)*(scale/previous);draw();}
+    wrap.addEventListener('pointerdown',event=>{if(event.target.closest('.zoom'))return;dragging=true;didMove=false;lastPointer={x:event.clientX,y:event.clientY};wrap.classList.add('dragging');wrap.setPointerCapture(event.pointerId);});
+    wrap.addEventListener('pointermove',event=>{const point=worldAt(event.clientX,event.clientY);updateCoords(point);if(!dragging||!lastPointer)return;const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;if(Math.abs(dx)+Math.abs(dy)>3)didMove=true;offsetX+=dx;offsetY+=dy;lastPointer={x:event.clientX,y:event.clientY};draw();});
+    function finishPointer(event){if(!dragging)return;if(!didMove){const point=worldAt(event.clientX,event.clientY);paint(point);}dragging=false;lastPointer=null;wrap.classList.remove('dragging');}
+    wrap.addEventListener('pointerup',finishPointer);wrap.addEventListener('pointercancel',()=>{dragging=false;lastPointer=null;wrap.classList.remove('dragging');});
+    wrap.addEventListener('wheel',event=>{event.preventDefault();const rect=wrap.getBoundingClientRect();zoomAt(event.deltaY<0?1.16:.86,event.clientX-rect.left,event.clientY-rect.top);},{passive:false});
+    document.getElementById('zoomIn').addEventListener('click',()=>zoomAt(1.3,wrap.clientWidth/2,wrap.clientHeight/2));
+    document.getElementById('zoomOut').addEventListener('click',()=>zoomAt(.77,wrap.clientWidth/2,wrap.clientHeight/2));
+    document.getElementById('resetView').addEventListener('click',fitWorld);
+    socket.on('init',saved=>{pixels.clear();for(const [key,value] of Object.entries(saved||{})){if(/^\d+,\d+$/.test(key)&&/^#[0-9a-f]{6}$/i.test(value))pixels.set(key,value);}draw();});
+    socket.on('update',pixel=>{if(!pixel||!Number.isInteger(pixel.x)||!Number.isInteger(pixel.y)||pixel.x<0||pixel.x>=360||pixel.y<0||pixel.y>=180||!/^#[0-9a-f]{6}$/i.test(pixel.color||''))return;pixels.set(`${pixel.x},${pixel.y}`,pixel.color);draw();});
+    socket.on('connect',()=>{const el=document.getElementById('connection');el.classList.add('connected');el.lastElementChild.textContent='Sunucuya bağlı';});
+    socket.on('disconnect',()=>{const el=document.getElementById('connection');el.classList.remove('connected');el.lastElementChild.textContent='Bağlantı kesildi, tekrar deneniyor…';});
+    socket.on('connect_error',()=>{const el=document.getElementById('connection');el.classList.remove('connected');el.lastElementChild.textContent='Sunucuya bağlanılamadı';});
+    resize();setInterval(updateTimer,200);window.addEventListener('resize',resize);
+  })();
   </script>
 </body>
 </html>
