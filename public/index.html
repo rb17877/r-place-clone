@@ -1,448 +1,347 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="tr">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bonkistan — Pixel Savaşı</title>
 <style>
-  * { box-sizing: border-box; }
-  body { margin: 0; font-family: system-ui, sans-serif; background: #0b1622; color: #e6eef5; height: 100vh; display: flex; flex-direction: column; }
-  header { padding: 10px 16px; background: #111d2c; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-  header b { font-size: 20px; }
-  #who { font-size: 13px; color: #8fa6bb; text-align: right; }
-  main { flex: 1; display: flex; min-height: 0; }
-  #wrap { flex: 1; position: relative; overflow: hidden; min-height: 200px; }
-  canvas { display: block; width: 100%; height: 100%; cursor: crosshair; touch-action: none; }
-  #info { position: absolute; left: 10px; bottom: 10px; font: 12px monospace; background: rgba(0,0,0,.5); padding: 4px 8px; border-radius: 4px; pointer-events: none; }
-  aside { width: 300px; background: #111d2c; padding: 14px; overflow-y: auto; }
-  aside h3 { margin: 16px 0 6px; font-size: 13px; color: #8fa6bb; letter-spacing: .05em; }
-  input { width: 100%; padding: 8px; margin: 4px 0; background: #0b1622; border: 1px solid #29405a; color: #e6eef5; border-radius: 6px; }
-  button { padding: 8px 10px; margin: 4px 4px 4px 0; background: #2a5d8f; color: #fff; border: 0; border-radius: 6px; cursor: pointer; }
-  button:hover { background: #356fa9; }
-  button:disabled { opacity: .6; cursor: wait; }
-  .gbtn { display: block; text-align: center; background: #fff; color: #222; padding: 9px; border-radius: 6px; text-decoration: none; margin: 6px 0; font-weight: 600; }
-  .gbtn:hover { background: #eee; }
-  .palette { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-  .sw { height: 34px; border-radius: 6px; border: 2px solid transparent; cursor: pointer; }
-  .sw.sel { border-color: #fff; }
-  #status { font-size: 13px; color: #f5c770; min-height: 18px; margin-top: 8px; }
-  .help { font-size: 12px; color: #8fa6bb; margin: 0 0 6px; }
-  .hidden { display: none; }
-  @media (max-width: 800px) { body { height: 100dvh; } main { flex-direction: column; } #wrap { flex: 1 1 55%; } aside { width: auto; max-height: 45%; } }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #0f0f14; color: #e8e8f0; min-height: 100vh; display: flex; flex-direction: column; }
+  header { background: #1a1a24; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2a2a3a; }
+  .logo { font-size: 20px; font-weight: bold; color: #ff4d6d; }
+  .user-area { display: flex; gap: 10px; align-items: center; }
+  .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
+  .btn-primary { background: #ff4d6d; color: white; }
+  .btn-primary:disabled { background: #555; cursor: not-allowed; }
+  .btn-secondary { background: #2a2a3a; color: #e8e8f0; }
+  .btn-google { background: white; color: #333; display: flex; align-items: center; gap: 8px; text-decoration: none; justify-content: center; padding: 10px; border-radius: 6px; }
+  main { flex: 1; display: flex; gap: 16px; padding: 16px; overflow: hidden; }
+  #canvas-wrap { flex: 1; background: #1a1a24; border-radius: 8px; overflow: auto; border: 1px solid #2a2a3a; }
+  #board { display: block; cursor: crosshair; image-rendering: pixelated; }
+  .sidebar { width: 280px; background: #1a1a24; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 16px; border: 1px solid #2a2a3a; overflow-y: auto; }
+  .section-title { font-size: 12px; text-transform: uppercase; color: #888; margin-bottom: 8px; letter-spacing: 1px; }
+  .palette { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+  .color-swatch { aspect-ratio: 1; border-radius: 4px; cursor: pointer; border: 2px solid transparent; }
+  .color-swatch.selected { border-color: white; }
+  .cooldown-bar { height: 6px; background: #2a2a3a; border-radius: 3px; overflow: hidden; }
+  .cooldown-fill { height: 100%; background: #ff4d6d; width: 0%; transition: width 0.1s linear; }
+  .cooldown-text { font-size: 13px; color: #aaa; margin-top: 4px; text-align: center; }
+  .coords { font-family: monospace; font-size: 13px; color: #aaa; text-align: center; }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; }
+  .modal-overlay.active { display: flex; }
+  .modal { background: #1a1a24; border-radius: 12px; padding: 24px; width: 90%; max-width: 400px; border: 1px solid #2a2a3a; }
+  .modal h2 { margin-bottom: 16px; color: #ff4d6d; }
+  .form-group { margin-bottom: 12px; }
+  .form-group label { display: block; font-size: 13px; margin-bottom: 4px; color: #aaa; }
+  .form-group input { width: 100%; padding: 10px; background: #0f0f14; border: 1px solid #2a2a3a; border-radius: 6px; color: #e8e8f0; font-size: 14px; }
+  .form-group input:focus { outline: none; border-color: #ff4d6d; }
+  .form-error { color: #ff4d6d; font-size: 13px; margin-top: 8px; min-height: 18px; }
+  .form-footer { margin-top: 12px; text-align: center; font-size: 13px; color: #aaa; }
+  .form-footer a { color: #ff4d6d; cursor: pointer; text-decoration: underline; }
+  .divider { display: flex; align-items: center; gap: 8px; margin: 16px 0; color: #666; font-size: 12px; }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: #2a2a3a; }
+  .image-preview { max-width: 100%; max-height: 200px; border-radius: 6px; margin-top: 8px; display: none; }
+  .image-preview.active { display: block; }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1a1a24; border: 1px solid #ff4d6d; color: #e8e8f0; padding: 12px 20px; border-radius: 8px; z-index: 200; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+  .toast.show { opacity: 1; }
 </style>
 </head>
 <body>
+
 <header>
-  <b>✦ bonkistan</b>
-  <span id="who"></span>
-</header>
-<main>
-  <div id="wrap">
-    <canvas id="board"></canvas>
-    <div id="info"></div>
+  <div class="logo">✦ bonkistan</div>
+  <div class="user-area" id="userArea">
+    <button class="btn btn-secondary" onclick="openModal('login')">Giriş Yap</button>
+    <button class="btn btn-primary" onclick="openModal('register')">Kayıt Ol</button>
   </div>
-  <aside>
-    <section id="authBox">
-      <h3 id="authTitle">GİRİŞ YAP</h3>
-      <a class="gbtn" href="/auth/google">Google ile giriş yap</a>
-      <p class="help" id="googleHint"></p>
-      <form id="authForm">
-        <input id="name" name="name" placeholder="Adın" autocomplete="name" class="hidden">
-        <input id="email" name="email" type="email" placeholder="E-posta adresi" autocomplete="email" required>
-        <input id="password" name="password" type="password" placeholder="Şifre" autocomplete="current-password" minlength="10" required>
-        <button id="submitAuth" type="submit">Giriş yap</button>
-      </form>
-      <button id="toggleAuth" type="button">Hesap oluştur</button>
-    </section>
-    <section id="userBox" class="hidden">
-      <h3>PROFİL</h3>
-      <div id="profile"></div>
-      <button id="logoutButton" type="button">Çıkış yap</button>
-    </section>
-    <h3>RENK PALETİ</h3>
-    <div class="palette" id="palette"></div>
-    <input type="color" id="custom" value="#7cb342" style="height:36px;padding:2px" aria-label="Özel renk seç">
-    <h3>RESİM YÜKLE</h3>
-    <p class="help">Resim en fazla 500×500 piksel olarak küçültülür. Yükledikten sonra haritada yerleştirmek istediğin noktaya tıkla.</p>
-    <input type="file" id="imgInput" accept="image/*" aria-label="Yüklenecek resim">
-    <button id="cancelImage" type="button">Resmi iptal et</button>
-    <div id="status" role="status" aria-live="polite"></div>
+</header>
+
+<main>
+  <div id="canvas-wrap">
+    <canvas id="board"></canvas>
+  </div>
+
+  <aside class="sidebar">
+    <div>
+      <div class="section-title">Konum</div>
+      <div class="coords" id="coords">Haritaya tıkla</div>
+    </div>
+
+    <div>
+      <div class="section-title">Renk Paleti</div>
+      <div class="palette" id="palette"></div>
+    </div>
+
+    <div>
+      <div class="section-title">Bekleme Süresi</div>
+      <div class="cooldown-bar"><div class="cooldown-fill" id="cooldownFill"></div></div>
+      <div class="cooldown-text" id="cooldownText">Hazır</div>
+    </div>
+
+    <div>
+      <div class="section-title">Resim Yükle</div>
+      <input type="file" id="imageInput" accept="image/*" style="font-size:12px;color:#aaa;">
+      <img id="imagePreview" class="image-preview">
+      <div style="font-size:11px;color:#666;margin-top:4px;">En fazla 500×500. Yükle, sonra haritada yerleştir.</div>
+      <button class="btn btn-secondary" id="cancelImageBtn" style="margin-top:8px;display:none;">İptal</button>
+    </div>
   </aside>
 </main>
+
+<div class="modal-overlay" id="loginModal">
+  <div class="modal">
+    <h2>Giriş Yap</h2>
+    <form id="loginForm">
+      <div class="form-group"><label>E-posta</label><input type="email" name="email" required></div>
+      <div class="form-group"><label>Şifre</label><input type="password" name="password" required></div>
+      <div class="form-error" id="loginError"></div>
+      <button type="submit" class="btn btn-primary" style="width:100%;">Giriş Yap</button>
+      <div class="divider">veya</div>
+      <a href="/auth/google" class="btn-google">Google ile giriş yap</a>
+      <div class="form-footer">Hesabın yok mu? <a onclick="switchModal('register')">Kayıt ol</a></div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="registerModal">
+  <div class="modal">
+    <h2>Kayıt Ol</h2>
+    <form id="registerForm">
+      <div class="form-group"><label>İsim</label><input type="text" name="name" required minlength="2" maxlength="24"></div>
+      <div class="form-group"><label>E-posta</label><input type="email" name="email" required></div>
+      <div class="form-group"><label>Şifre (en az 10 karakter)</label><input type="password" name="password" required minlength="10"></div>
+      <div class="form-error" id="registerError"></div>
+      <button type="submit" class="btn btn-primary" style="width:100%;">Kayıt Ol</button>
+      <div class="divider">veya</div>
+      <a href="/auth/google" class="btn-google">Google ile kayıt ol</a>
+      <div class="form-footer">Zaten hesabın var mı? <a onclick="switchModal('login')">Giriş yap</a></div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
 <script src="/socket.io/socket.io.js"></script>
 <script>
-'use strict';
-const SIZE = 16000;
-const COOLDOWN_MS = 3000;
-const MAX_IMG = 500;
-const COLORS = ['#ffffff','#1a1c22','#e53935','#fb8c00','#fdd835',
-                '#7cb342','#2e7d32','#00acc1','#1e88e5','#5e35b1',
-                '#8e24aa','#ec407a','#6d4c41','#90a4ae','#37474f'];
+const COLORS = ['#ffffff','#c4c4c4','#7d7d7d','#404040','#000000','#ff0000','#ff7f00','#ffff00','#00ff00','#00ffff','#0000ff','#7f00ff','#ff00ff','#a0522d','#ff69b4','#ffd700','#90ee90','#87ceeb'];
+
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
-let dpr = window.devicePixelRatio || 1;
-let me = null;
-let socket = null;
-let selected = COLORS[5];
-let view = { scale: 0.05, x: 0, y: 0 };
-let fitted = false;
-const pixels = new Map();
-const landPaths = [];
-let pendingImg = null;
-let hoverWorld = null;
-let queue = [];
-let pumpTimer = null;
-let drag = null;
-let authMode = 'login';
+const socket = io();
 
-function setStatus(message) { document.getElementById('status').textContent = message; }
-function openAuth(message) {
-  document.getElementById('authBox').classList.remove('hidden');
-  document.getElementById('authBox').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  if (message) setStatus(message);
-}
-async function api(url, body) {
-  const response = await fetch(url, {
-    method: body === undefined ? 'GET' : 'POST',
-    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
-    credentials: 'same-origin'
-  });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(result.error || 'Bir hata oluştu.');
-  return result;
-}
-function setAuthMode(mode) {
-  authMode = mode;
-  const registering = mode === 'register';
-  document.getElementById('authTitle').textContent = registering ? 'KAYIT OL' : 'GİRİŞ YAP';
-  document.getElementById('name').classList.toggle('hidden', !registering);
-  document.getElementById('name').required = registering;
-  document.getElementById('password').autocomplete = registering ? 'new-password' : 'current-password';
-  document.getElementById('submitAuth').textContent = registering ? 'Kayıt ol' : 'Giriş yap';
-  document.getElementById('toggleAuth').textContent = registering ? 'Zaten hesabım var' : 'Hesap oluştur';
-}
-async function refreshUser() {
-  const result = await api('/api/me');
-  me = result.user;
-  document.getElementById('authBox').classList.toggle('hidden', Boolean(me));
-  document.getElementById('userBox').classList.toggle('hidden', !me);
-  document.getElementById('who').textContent = me ? `Merhaba, ${me.name}` : 'Piksel koymak için giriş yap';
-  if (me) {
-    document.getElementById('profile').textContent = `${me.name} · ${me.email || ''}`;
-    queue = [];
-    if (pumpTimer) { clearTimeout(pumpTimer); pumpTimer = null; }
-  }
-  document.getElementById('googleHint').textContent = result.googleEnabled ? '' : 'Google girişi sunucu ayarlarında etkinleştirildiğinde kullanılabilir.';
-}
-document.getElementById('authForm').addEventListener('submit', async event => {
-  event.preventDefault();
-  const submit = document.getElementById('submitAuth');
-  submit.disabled = true;
-  try {
-    const body = {
-      email: document.getElementById('email').value,
-      password: document.getElementById('password').value
-    };
-    if (authMode === 'register') body.name = document.getElementById('name').value;
-    await api(`/api/${authMode}`, body);
-    await refreshUser();
-    if (socket) socket.disconnect();
-    connect();
-    setStatus('Giriş başarılı. Çizim yapabilir veya resmi yerleştirebilirsin.');
-  } catch (error) { setStatus(error.message); }
-  finally { submit.disabled = false; }
-});
-document.getElementById('toggleAuth').addEventListener('click', () => setAuthMode(authMode === 'login' ? 'register' : 'login'));
-document.getElementById('logoutButton').addEventListener('click', async () => {
-  try {
-    await api('/api/logout', {});
-    me = null;
-    if (socket) socket.disconnect();
-    await refreshUser();
-    connect();
-    setStatus('Oturum kapatıldı.');
-  } catch (error) { setStatus(error.message); }
-});
+let SIZE = 500;
+const PIXEL_SIZE = 10;
+let selectedColor = COLORS[0];
+let currentUser = null;
+let nextPaintAt = 0;
+let pendingImage = null;
 
-// ---------- Dünya haritası ----------
-function proj(lon, lat) { return [(lon + 180) / 360 * SIZE, (90 - lat) / 180 * SIZE]; }
-function buildLand(geojson) {
-  for (const feature of geojson.features || []) {
-    const geometry = feature.geometry;
-    if (!geometry) continue;
-    const polys = geometry.type === 'Polygon' ? [geometry.coordinates]
-      : geometry.type === 'MultiPolygon' ? geometry.coordinates : [];
-    const path = new Path2D();
-    for (const polygon of polys) for (const ring of polygon) {
-      let offset = 0, previousLon = null;
-      ring.forEach(([lon, lat], index) => {
-        if (previousLon !== null) {
-          if (lon - previousLon > 180) offset -= 360;
-          else if (previousLon - lon > 180) offset += 360;
-        }
-        previousLon = lon;
-        const [x, y] = proj(lon + offset, lat);
-        if (index) path.lineTo(x, y); else path.moveTo(x, y);
-      });
-      path.closePath();
-    }
-    landPaths.push(path);
-  }
-  draw();
-}
-function fitView() {
-  const width = canvas.clientWidth, height = canvas.clientHeight;
-  if (!width || !height) return;
-  view.scale = Math.min(width / SIZE, height / SIZE) * 0.95;
-  view.x = (width - SIZE * view.scale) / 2;
-  view.y = (height - SIZE * view.scale) / 2;
-}
-function resize() {
-  dpr = window.devicePixelRatio || 1;
-  canvas.width = Math.max(1, Math.round(canvas.clientWidth * dpr));
-  canvas.height = Math.max(1, Math.round(canvas.clientHeight * dpr));
-  if (!fitted || !view.scale) { fitView(); fitted = true; }
-  draw();
-}
-function draw() {
-  const width = canvas.clientWidth, height = canvas.clientHeight;
-  if (!width || !height) return;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.fillStyle = '#0f2236';
-  ctx.fillRect(0, 0, width, height);
-  ctx.setTransform(dpr * view.scale, 0, 0, dpr * view.scale, dpr * view.x, dpr * view.y);
-  ctx.fillStyle = '#132c44';
-  ctx.fillRect(0, 0, SIZE, SIZE);
-  ctx.fillStyle = '#4a8a72';
-  for (const path of landPaths) ctx.fill(path, 'nonzero');
-  ctx.strokeStyle = '#a6dcc2';
-  ctx.lineWidth = 1 / view.scale;
-  for (const path of landPaths) ctx.stroke(path);
-  const x0 = Math.max(0, Math.floor(-view.x / view.scale));
-  const y0 = Math.max(0, Math.floor(-view.y / view.scale));
-  const x1 = Math.min(SIZE, Math.ceil(x0 + width / view.scale));
-  const y1 = Math.min(SIZE, Math.ceil(y0 + height / view.scale));
-  for (const [key, pixel] of pixels) {
-    const x = key % SIZE, y = Math.floor(key / SIZE);
-    if (x < x0 || x > x1 || y < y0 || y > y1) continue;
-    ctx.fillStyle = pixel.c;
-    ctx.fillRect(x, y, 1, 1);
-  }
-  if (pendingImg && hoverWorld) {
-    ctx.globalAlpha = 0.6;
-    for (const pixel of pendingImg.data) {
-      ctx.fillStyle = pixel.color;
-      ctx.fillRect(hoverWorld.x + pixel.dx, hoverWorld.y + pixel.dy, 1, 1);
-    }
-    ctx.globalAlpha = 1;
-  }
-  ctx.strokeStyle = '#2d4d6b';
-  ctx.lineWidth = 2 / view.scale;
-  ctx.strokeRect(0, 0, SIZE, SIZE);
-}
-function screenToWorld(sx, sy) {
-  return { x: Math.floor((sx - view.x) / view.scale), y: Math.floor((sy - view.y) / view.scale) };
-}
-function inBounds(point) { return Boolean(point && point.x >= 0 && point.y >= 0 && point.x < SIZE && point.y < SIZE); }
-function updateInfo() {
-  let text = '';
-  if (inBounds(hoverWorld)) {
-    const pixel = pixels.get(hoverWorld.y * SIZE + hoverWorld.x);
-    text = ` · (${hoverWorld.x}, ${hoverWorld.y})` + (pixel ? ` · sahibi: ${pixel.o}` : ' · boş');
-  }
-  document.getElementById('info').textContent = `${pixels.size} boyalı piksel${text}`;
-}
+canvas.width = SIZE * PIXEL_SIZE;
+canvas.height = SIZE * PIXEL_SIZE;
 
-// ---------- Fare ve çizim ----------
-canvas.addEventListener('pointerdown', event => {
-  if (event.button !== 0) return;
-  drag = { x: event.clientX, y: event.clientY, vx: view.x, vy: view.y, moved: false };
-  canvas.setPointerCapture(event.pointerId);
-});
-canvas.addEventListener('pointermove', event => {
-  const rect = canvas.getBoundingClientRect();
-  hoverWorld = screenToWorld(event.clientX - rect.left, event.clientY - rect.top);
-  if (drag) {
-    const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
-    if (Math.hypot(dx, dy) > 4) drag.moved = true;
-    if (drag.moved) { view.x = drag.vx + dx; view.y = drag.vy + dy; }
-  }
-  updateInfo();
-  draw();
-});
-canvas.addEventListener('pointerup', event => {
-  if (!drag) return;
-  const wasClick = !drag.moved;
-  drag = null;
-  if (wasClick) {
-    const rect = canvas.getBoundingClientRect();
-    placeAt(screenToWorld(event.clientX - rect.left, event.clientY - rect.top));
-  }
-});
-canvas.addEventListener('pointercancel', () => { drag = null; });
-canvas.addEventListener('pointerleave', () => { if (!drag) { hoverWorld = null; updateInfo(); draw(); } });
-canvas.addEventListener('wheel', event => {
-  event.preventDefault();
-  const rect = canvas.getBoundingClientRect();
-  const sx = event.clientX - rect.left, sy = event.clientY - rect.top;
-  const factor = event.deltaY < 0 ? 1.15 : 1 / 1.15;
-  const nextScale = Math.min(Math.max(view.scale * factor, 0.00001), 2);
-  view.x = sx - (sx - view.x) * (nextScale / view.scale);
-  view.y = sy - (sy - view.y) * (nextScale / view.scale);
-  view.scale = nextScale;
-  draw();
-}, { passive: false });
-function placeAt(point) {
-  if (!inBounds(point)) return;
-  if (!me) return openAuth('Çizim yapmak veya resim yerleştirmek için giriş yap ya da kayıt ol.');
-  if (pendingImg) {
-    if (point.x + pendingImg.width > SIZE || point.y + pendingImg.height > SIZE) {
-      return setStatus('Resmin tamamı harita sınırları içinde kalmalı.');
-    }
-    const image = {
-      x: point.x, y: point.y, width: pendingImg.width, height: pendingImg.height,
-      pixels: pendingImg.colors
-    };
-    setStatus('Resim haritaya gönderiliyor…');
-    socket.emit('placeImage', image, result => {
-      if (!result?.ok) {
-        if (result?.wait) setStatus(`Tekrar denemek için ${Math.ceil(result.wait / 1000)} saniye bekle.`);
-        else if (result?.error) { setStatus(result.error); if (/giriş/i.test(result.error)) openAuth(result.error); }
-        return;
-      }
-      pendingImg = null;
-      document.getElementById('imgInput').value = '';
-      setStatus(`${result.count} resim pikseli haritaya yerleştirildi.`);
-      draw();
-    });
-  } else {
-    queue.push({ x: point.x, y: point.y, color: selected });
-    pump();
-  }
-}
-function pump() {
-  if (pumpTimer || queue.length === 0 || !socket || !me) return;
-  pumpTimer = setTimeout(() => {
-    pumpTimer = null;
-    const pixel = queue.shift();
-    if (!pixel) return;
-    socket.emit('place', pixel, result => {
-      if (!result?.ok) {
-        if (result?.wait) {
-          queue.unshift(pixel);
-          pumpTimer = setTimeout(() => { pumpTimer = null; pump(); }, result.wait + 50);
-        } else {
-          setStatus(result?.error || 'Piksel gönderilemedi.');
-          if (/giriş/i.test(result?.error || '')) openAuth(result.error);
-          pump();
-        }
-        return;
-      }
-      if (queue.length) setStatus(`Sırada ${queue.length} piksel var.`);
-      pump();
-    });
-  }, queue.length && window.lastPixelAt ? Math.max(0, window.lastPixelAt + COOLDOWN_MS - Date.now()) : 0);
-  window.lastPixelAt = Date.now();
-}
-
-// ---------- Renk paleti ----------
-function markSelected() {
-  document.querySelectorAll('.sw').forEach(element => element.classList.toggle('sel', element.dataset.c === selected));
-}
 const palette = document.getElementById('palette');
-COLORS.forEach(color => {
-  const swatch = document.createElement('button');
-  swatch.type = 'button';
-  swatch.className = 'sw';
-  swatch.dataset.c = color;
-  swatch.style.background = color;
-  swatch.setAttribute('aria-label', `Renk ${color}`);
-  swatch.onclick = () => { selected = color; markSelected(); };
-  palette.appendChild(swatch);
-});
-document.getElementById('custom').addEventListener('input', event => { selected = event.target.value; markSelected(); });
-markSelected();
-
-// ---------- Resim yükleme (en fazla 500×500) ----------
-document.getElementById('imgInput').addEventListener('change', event => {
-  const file = event.target.files[0];
-  if (!file) return;
-  const objectUrl = URL.createObjectURL(file);
-  const image = new Image();
-  image.onload = () => {
-    URL.revokeObjectURL(objectUrl);
-    const scale = Math.min(MAX_IMG / image.width, MAX_IMG / image.height, 1);
-    const width = Math.max(1, Math.round(image.width * scale));
-    const height = Math.max(1, Math.round(image.height * scale));
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = width;
-    tempCanvas.height = height;
-    const tempContext = tempCanvas.getContext('2d', { willReadFrequently: true });
-    tempContext.drawImage(image, 0, 0, width, height);
-    const rgba = tempContext.getImageData(0, 0, width, height).data;
-    const colors = new Array(width * height).fill(null);
-    const data = [];
-    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
-      const index = (y * width + x) * 4;
-      if (rgba[index + 3] < 128) continue;
-      const color = '#' + [rgba[index], rgba[index + 1], rgba[index + 2]].map(value => value.toString(16).padStart(2, '0')).join('');
-      colors[y * width + x] = color;
-      data.push({ dx: x, dy: y, color });
-    }
-    pendingImg = { width, height, colors, data };
-    setStatus(`Resim hazır (${width}×${height}). Haritada yerleştirmek istediğin noktaya tıkla.`);
-    draw();
+COLORS.forEach((color, i) => {
+  const sw = document.createElement('div');
+  sw.className = 'color-swatch' + (i === 0 ? ' selected' : '');
+  sw.style.background = color;
+  sw.onclick = () => {
+    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+    sw.classList.add('selected');
+    selectedColor = color;
   };
-  image.onerror = () => { URL.revokeObjectURL(objectUrl); setStatus('Resim dosyası okunamadı.'); };
-  image.src = objectUrl;
-});
-document.getElementById('cancelImage').addEventListener('click', () => {
-  pendingImg = null;
-  document.getElementById('imgInput').value = '';
-  setStatus('Resim iptal edildi.');
-  draw();
+  palette.appendChild(sw);
 });
 
-// ---------- Canlı tahta bağlantısı ----------
-function connect() {
-  socket = io();
-  socket.on('init', ({ pixels: list }) => {
-    pixels.clear();
-    for (const [key, pixel] of list) pixels.set(Number(key), { c: pixel.color, o: pixel.ownerName || 'Anonim' });
-    updateInfo();
-    draw();
-  });
-  socket.on('update', update => {
-    pixels.set(update.y * SIZE + update.x, { c: update.color, o: update.ownerName || 'Anonim' });
-    updateInfo();
-    draw();
-  });
-  socket.on('imageUpdate', updates => {
-    for (const update of updates) pixels.set(update.y * SIZE + update.x, { c: update.color, o: update.ownerName || 'Anonim' });
-    updateInfo();
-    draw();
-  });
-  socket.on('connect_error', () => setStatus('Sunucuya bağlanılamadı. Sayfayı yenilemeyi dene.'));
+function drawPixel(x, y, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(x * PIXEL_SIZE, y * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
 }
-async function boot() {
-  try {
-    await refreshUser();
-  } catch (error) {
-    setStatus(error.message);
-    openAuth('Oturum bilgisi alınamadı. Giriş yapmayı deneyebilirsin.');
+
+socket.on('init', data => {
+  SIZE = data.size;
+  canvas.width = SIZE * PIXEL_SIZE;
+  canvas.height = SIZE * PIXEL_SIZE;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  data.pixels.forEach(([id, pixel]) => {
+    const x = id % SIZE;
+    const y = Math.floor(id / SIZE);
+    drawPixel(x, y, pixel.color);
+  });
+});
+
+socket.on('update', p => drawPixel(p.x, p.y, p.color));
+socket.on('imageUpdate', updates => updates.forEach(p => drawPixel(p.x, p.y, p.color)));
+
+canvas.addEventListener('click', e => {
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.floor((e.clientX - rect.left) / PIXEL_SIZE);
+  const y = Math.floor((e.clientY - rect.top) / PIXEL_SIZE);
+
+  if (pendingImage) { placeImage(x, y); return; }
+
+  socket.emit('place', { x, y, color: selectedColor }, res => {
+    if (!res) return;
+    if (res.ok) {
+      nextPaintAt = res.nextPaintAt;
+      startCooldown();
+      showToast('Piksel yerleştirildi!');
+    } else if (res.wait) {
+      showToast(`Bekle: ${Math.ceil(res.wait/1000)}s`);
+    } else {
+      showToast(res.error || 'Hata');
+    }
+  });
+});
+
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.floor((e.clientX - rect.left) / PIXEL_SIZE);
+  const y = Math.floor((e.clientY - rect.top) / PIXEL_SIZE);
+  document.getElementById('coords').textContent = `x: ${x}, y: ${y}`;
+});
+
+function startCooldown() {
+  const fill = document.getElementById('cooldownFill');
+  const text = document.getElementById('cooldownText');
+  const tick = () => {
+    const remaining = nextPaintAt - Date.now();
+    if (remaining <= 0) { fill.style.width = '0%'; text.textContent = 'Hazır'; return; }
+    fill.style.width = (remaining / 3000 * 100) + '%';
+    text.textContent = `${(remaining/1000).toFixed(1)}s`;
+    requestAnimationFrame(tick);
+  };
+  tick();
+}
+
+const imageInput = document.getElementById('imageInput');
+const imagePreview = document.getElementById('imagePreview');
+const cancelImageBtn = document.getElementById('cancelImageBtn');
+
+imageInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      const maxSide = 500;
+      let w = img.width, h = img.height;
+      if (w > maxSide || h > maxSide) {
+        const ratio = Math.min(maxSide / w, maxSide / h);
+        w = Math.round(w * ratio);
+        h = Math.round(h * ratio);
+      }
+      const tmp = document.createElement('canvas');
+      tmp.width = w; tmp.height = h;
+      const tctx = tmp.getContext('2d');
+      tctx.drawImage(img, 0, 0, w, h);
+      const data = tctx.getImageData(0, 0, w, h).data;
+      const pixels = [];
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i+3] < 128) { pixels.push(null); continue; }
+        const r = data[i], g = data[i+1], b = data[i+2];
+        pixels.push('#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join(''));
+      }
+      pendingImage = { width: w, height: h, pixels };
+      imagePreview.src = ev.target.result;
+      imagePreview.classList.add('active');
+      cancelImageBtn.style.display = 'block';
+      showToast('Haritada yerleştirmek istediğin yere tıkla');
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+cancelImageBtn.onclick = () => {
+  pendingImage = null;
+  imageInput.value = '';
+  imagePreview.classList.remove('active');
+  cancelImageBtn.style.display = 'none';
+};
+
+function placeImage(x, y) {
+  if (!pendingImage) return;
+  socket.emit('placeImage', { x, y, ...pendingImage }, res => {
+    if (!res) return;
+    if (res.ok) {
+      nextPaintAt = res.nextPaintAt;
+      startCooldown();
+      showToast(`${res.count} piksel yerleştirildi!`);
+      cancelImageBtn.click();
+    } else if (res.wait) {
+      showToast(`Bekle: ${Math.ceil(res.wait/1000)}s`);
+    } else {
+      showToast(res.error || 'Hata');
+    }
+  });
+}
+
+function openModal(which) {
+  document.getElementById('loginModal').classList.toggle('active', which === 'login');
+  document.getElementById('registerModal').classList.toggle('active', which === 'register');
+}
+function switchModal(which) { openModal(which); }
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('active'); });
+});
+
+document.getElementById('loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const res = await fetch('/api/login', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ email: fd.get('email'), password: fd.get('password') })
+  });
+  const data = await res.json();
+  if (res.ok) { document.getElementById('loginModal').classList.remove('active'); loadUser(); }
+  else document.getElementById('loginError').textContent = data.error;
+});
+
+document.getElementById('registerForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const res = await fetch('/api/register', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ name: fd.get('name'), email: fd.get('email'), password: fd.get('password') })
+  });
+  const data = await res.json();
+  if (res.ok) { document.getElementById('registerModal').classList.remove('active'); loadUser(); }
+  else document.getElementById('registerError').textContent = data.error;
+});
+
+async function loadUser() {
+  const res = await fetch('/api/me');
+  const data = await res.json();
+  currentUser = data.user;
+  const area = document.getElementById('userArea');
+  if (currentUser) {
+    area.innerHTML = `<span style="font-size:14px;">Merhaba, <b>${currentUser.name}</b></span>
+      <button class="btn btn-secondary" onclick="logout()">Çıkış</button>`;
+  } else {
+    area.innerHTML = `<button class="btn btn-secondary" onclick="openModal('login')">Giriş Yap</button>
+      <button class="btn btn-primary" onclick="openModal('register')">Kayıt Ol</button>`;
   }
-  const params = new URLSearchParams(location.search);
-  if (params.get('authError') === 'google') setStatus('Google girişi başarısız oldu. Tekrar dene.');
-  connect();
-  window.addEventListener('resize', resize);
-  resize();
-  fetch('/world.geojson').then(response => {
-    if (!response.ok) throw new Error('Harita verisi alınamadı.');
-    return response.json();
-  }).then(buildLand).catch(() => setStatus('Dünya haritası yüklenemedi.'));
 }
-boot();
+
+async function logout() {
+  await fetch('/api/logout', { method: 'POST' });
+  loadUser();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+loadUser();
+if (location.search.includes('authError=google')) showToast('Google girişi başarısız');
 </script>
 </body>
 </html>
