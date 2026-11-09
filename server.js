@@ -2,53 +2,60 @@ const express = require('express');
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
+const session = require('express-session');
+const FileStore = require('session-file-store')(session);
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { maxHttpBufferSize: 1e6 });
-
 const SIZE = 16000;
 const COOLDOWN_MS = 3000;
 const MAX_IMAGE_SIDE = 32;
-const BOARD_FILE = path.join(__dirname, 'data', 'board.json');
-// Sparse storage: key is y * SIZE + x, value is a lowercase #rrggbb color.
-const pixels = new Map();
-const lastPlaced = new Map();
+const DATA_DIR = path.join(__dirname, 'data');
+const BOARD_FILE = path.join(DATA_DIR, 'board.json');
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
 
-app.use(express.static(path.join(__dirname, 'public')));
-app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+fs.mkdirSync(DATA_DIR, { recursive: true });
+app.set('trust proxy', 1);
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: false }));
 
-function pixelKey(x, y) {
-  return y * SIZE + x;
-}
-
-function isValidColor(color) {
-  return typeof color === 'string' && /^#[0-9a-f]{6}$/i.test(color);
-}
-
-// Read older boards stored with "x,y" keys as well as linear-key boards.
-try {
-  const saved = JSON.parse(fs.readFileSync(BOARD_FILE, 'utf8'));
-  for (const [key, color] of Object.entries(saved)) {
-    if (!isValidColor(color)) continue;
-    const coords = /^(\d+),(\d+)$/.exec(key);
-    if (coords) {
-      const x = Number(coords[1]);
-      const y = Number(coords[2]);
-      if (x >= 0 && x < SIZE && y >= 0 && y < SIZE) pixels.set(pixelKey(x, y), color.toLowerCase());
-      continue;
-    }
-    if (/^\d+$/.test(key)) {
-      const linearKey = Number(key);
-      if (Number.isSafeInteger(linearKey) && linearKey >= 0 && linearKey < SIZE * SIZE) {
-        pixels.set(linearKey, color.toLowerCase());
-      }
-    }
+function readJson(file, fallback) {
+  try { return JSON.parse(fs.readFileSync(file, 'utf8')); }
+  catch (error) {
+    if (error.code !== 'ENOENT') console.error(`Could not read ${path.basename(file)}:`, error);
+    return fallback;
   }
-  console.log(`Loaded ${pixels.size} Bonkistan pixels.`);
-} catch (error) {
-  if (error.code !== 'ENOENT') console.error('Could not load board:', error);
+}
+function writeJson(file, value) {
+  const tempFile = `${file}.tmp`;
+  fs.writeFileSync(tempFile, JSON.stringify(value));
+  fs.renameSync(tempFile, file);
+}
+
+const users = new Map(Object.entries(readJson(USERS_FILE, {})));
+const pixels = new Map();
+const savedBoard = readJson(BOARD_FILE, {});
+for (const [key, value] of Object.entries(savedBoard)) {
+  let x, y;
+  const coords = /^(\d+),(\d+)$/.exec(key);
+  if (coords) { x = Number(coords[1]); y = Number(coords[2]); }
+  else if (/^\d+$/.test(key)) { const id = Number(key); x = id % SIZE; y = Math.floor(id / SIZE); }
+  if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || y < 0 || x >= SIZE || y >= SIZE) continue;
+  // Migrate old boards, whose values were just color strings.
+  const pixel = typeof value === 'string' ? { color: value, ownerId: null, ownerName: 'Anonim' } : value;
+  if (!pixel || typeof pixel.color !== 'string' || !/^#[0-9a-f]{6}$/i.test(pixel.color)) continue;
+  pixels.set(y * SIZE + x, {
+    color: pixel.color.toLowerCase(),
+    ownerId: typeof pixel.ownerId === 'string' ? pixel.ownerId : null,
+    ownerName: typeof pixel.ownerName === 'string' ? pixel.ownerName : 'Anonim',
+    updatedAt: Number.isFinite(pixel.updatedAt) ? pixel.updatedAt : null
+  });
 }
 
 let saveTimer;
@@ -56,98 +63,198 @@ function saveBoard() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     try {
-      fs.mkdirSync(path.dirname(BOARD_FILE), { recursive: true });
-      const serializable = {};
-      for (const [key, color] of pixels) {
-        const x = key % SIZE;
-        const y = Math.floor(key / SIZE);
-        serializable[`${x},${y}`] = color;
-      }
-      const tempFile = `${BOARD_FILE}.tmp`;
-      fs.writeFileSync(tempFile, JSON.stringify(serializable));
-      fs.renameSync(tempFile, BOARD_FILE);
-    } catch (error) {
-      console.error('Could not save board:', error);
-    }
+      const output = {};
+      for (const [id, pixel] of pixels) output[`${id % SIZE},${Math.floor(id / SIZE)}`] = pixel;
+      writeJson(BOARD_FILE, output);
+    } catch (error) { console.error('Could not save board:', error); }
   }, 400);
 }
+function saveUsers() {
+  try { writeJson(USERS_FILE, Object.fromEntries(users)); }
+  catch (error) { console.error('Could not save users:', error); }
+}
+function publicUser(user) {
+  return { id: user.id, name: user.name, email: user.email || null, avatar: user.avatar || null, provider: user.provider };
+}
+function findUser(id) { return id ? users.get(id) || null : null; }
 
-function checkCooldown(socket) {
-  const now = Date.now();
-  const last = lastPlaced.get(socket.id) || 0;
-  const wait = COOLDOWN_MS - (now - last);
-  if (wait > 0) return { ok: false, wait };
-  lastPlaced.set(socket.id, now);
-  return { ok: true, nextPaintAt: now + COOLDOWN_MS };
+const sessionSecret = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
+if (!process.env.SESSION_SECRET) console.warn('SESSION_SECRET is unset; sessions will expire when the server restarts.');
+const sessionMiddleware = session({
+  store: new FileStore({ path: path.join(DATA_DIR, 'sessions'), retries: 0, ttl: 86400 }),
+  secret: sessionSecret,
+  resave: false,
+  saveUninitialized: false,
+  cookie: { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 7 * 24 * 60 * 60 * 1000 }
+});
+app.use(sessionMiddleware);
+app.use(passport.initialize());
+app.use(passport.session());
+passport.serializeUser((user, done) => done(null, user.id));
+passport.deserializeUser((id, done) => done(null, findUser(id)));
+
+const googleConfigured = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+if (googleConfigured) {
+  passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: process.env.GOOGLE_CALLBACK_URL || '/auth/google/callback'
+  }, (_accessToken, _refreshToken, profile, done) => {
+    const email = profile.emails && profile.emails[0] && profile.emails[0].value;
+    if (!email) return done(new Error('Google hesabından e-posta alınamadı.'));
+    let user = [...users.values()].find(item => item.googleId === profile.id || item.email?.toLowerCase() === email.toLowerCase());
+    if (user) {
+      user.googleId = profile.id;
+      user.provider = user.passwordHash ? 'email+google' : 'google';
+      user.avatar = profile.photos?.[0]?.value || user.avatar || null;
+    } else {
+      user = {
+        id: `google:${profile.id}`,
+        googleId: profile.id,
+        name: profile.displayName || email.split('@')[0],
+        email: email.toLowerCase(),
+        avatar: profile.photos?.[0]?.value || null,
+        provider: 'google',
+        passwordHash: null,
+        createdAt: Date.now()
+      };
+      users.set(user.id, user);
+    }
+    saveUsers();
+    done(null, user);
+  }));
 }
 
+function normalizeEmail(value) { return typeof value === 'string' ? value.trim().toLowerCase() : ''; }
+function validEmail(value) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) && value.length <= 254; }
+function requireUser(req, res, next) {
+  const user = findUser(req.session.userId);
+  if (!user) return res.status(401).json({ error: 'Devam etmek için giriş yap.' });
+  req.currentUser = user;
+  next();
+}
+function regenerateSession(req) {
+  return new Promise((resolve, reject) => req.session.regenerate(error => error ? reject(error) : resolve()));
+}
+function saveSession(req) {
+  return new Promise((resolve, reject) => req.session.save(error => error ? reject(error) : resolve()));
+}
+
+app.get('/api/me', (req, res) => {
+  const user = findUser(req.session.userId);
+  res.json({ user: user ? publicUser(user) : null, googleEnabled: googleConfigured });
+});
+app.post('/api/register', async (req, res, next) => {
+  try {
+    const name = typeof req.body.name === 'string' ? req.body.name.trim().replace(/\s+/g, ' ').slice(0, 24) : '';
+    const email = normalizeEmail(req.body.email);
+    const password = req.body.password;
+    if (name.length < 2) return res.status(400).json({ error: 'İsim en az 2 karakter olmalı.' });
+    if (!validEmail(email)) return res.status(400).json({ error: 'Geçerli bir e-posta adresi yaz.' });
+    if (typeof password !== 'string' || password.length < 10 || password.length > 200) return res.status(400).json({ error: 'Şifre 10–200 karakter olmalı.' });
+    if ([...users.values()].some(user => user.email?.toLowerCase() === email)) return res.status(409).json({ error: 'Bu e-posta zaten kayıtlı.' });
+    const user = { id: `local:${crypto.randomUUID()}`, name, email, avatar: null, provider: 'email', passwordHash: await bcrypt.hash(password, 12), createdAt: Date.now() };
+    users.set(user.id, user);
+    saveUsers();
+    await regenerateSession(req);
+    req.session.userId = user.id;
+    await saveSession(req);
+    res.status(201).json({ user: publicUser(user) });
+  } catch (error) { next(error); }
+});
+app.post('/api/login', async (req, res, next) => {
+  try {
+    const email = normalizeEmail(req.body.email);
+    const password = req.body.password;
+    const user = [...users.values()].find(item => item.email?.toLowerCase() === email && item.passwordHash);
+    if (!user || typeof password !== 'string' || !await bcrypt.compare(password, user.passwordHash)) {
+      return res.status(401).json({ error: 'E-posta veya şifre hatalı.' });
+    }
+    await regenerateSession(req);
+    req.session.userId = user.id;
+    await saveSession(req);
+    res.json({ user: publicUser(user) });
+  } catch (error) { next(error); }
+});
+app.post('/api/logout', (req, res, next) => req.logout(error => {
+  if (error) return next(error);
+  req.session.destroy(error => {
+    if (error) return next(error);
+    res.clearCookie('connect.sid', { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' });
+    res.json({ ok: true });
+  });
+}));
+if (googleConfigured) {
+  app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'], state: true }));
+  app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: '/?authError=google', session: true }), async (req, res, next) => {
+    try {
+      await regenerateSession(req);
+      req.session.userId = req.user.id;
+      await saveSession(req);
+      res.redirect('/');
+    } catch (error) { next(error); }
+  });
+} else {
+  app.get('/auth/google', (_req, res) => res.status(503).send('Google ile giriş için GOOGLE_CLIENT_ID ve GOOGLE_CLIENT_SECRET ayarlanmalı.'));
+}
+app.use(express.static(path.join(__dirname, 'public')));
+app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+
+// Share the same session with Socket.IO so pixels always have an authenticated owner.
+io.engine.use(sessionMiddleware);
+const lastPlaced = new Map();
+function acknowledge(ack, data) { if (typeof ack === 'function') ack(data); }
+function getPixelUpdate(x, y, color, user) {
+  return { x, y, color: color.toLowerCase(), ownerId: user.id, ownerName: user.name, updatedAt: Date.now() };
+}
 io.on('connection', socket => {
-  // Keep the existing browser client's "x,y" key protocol compatible.
-  const initialPixels = {};
-  for (const [key, color] of pixels) {
-    initialPixels[`${key % SIZE},${Math.floor(key / SIZE)}`] = color;
-  }
-  socket.emit('init', initialPixels);
+  const user = findUser(socket.request.session?.userId);
+  socket.emit('init', { size: SIZE, pixels: [...pixels].map(([id, pixel]) => [id, pixel]) });
 
-  socket.on('place', (pixel, acknowledge) => {
-    const reply = typeof acknowledge === 'function' ? acknowledge : () => {};
-    if (!pixel || !Number.isInteger(pixel.x) || !Number.isInteger(pixel.y) ||
-        pixel.x < 0 || pixel.y < 0 || pixel.x >= SIZE || pixel.y >= SIZE ||
-        !isValidColor(pixel.color)) {
-      reply({ ok: false, error: 'Geçersiz piksel veya renk.' });
-      return;
+  socket.on('place', (pixel, ack) => {
+    if (!user) return acknowledge(ack, { ok: false, error: 'Piksel boyamak için giriş yapmalısın.' });
+    if (!pixel || !Number.isInteger(pixel.x) || !Number.isInteger(pixel.y) || pixel.x < 0 || pixel.y < 0 || pixel.x >= SIZE || pixel.y >= SIZE || typeof pixel.color !== 'string' || !/^#[0-9a-f]{6}$/i.test(pixel.color)) {
+      return acknowledge(ack, { ok: false, error: 'Geçersiz piksel veya renk.' });
     }
-
-    const cooldown = checkCooldown(socket);
-    if (!cooldown.ok) {
-      reply(cooldown);
-      return;
-    }
-
-    const update = { x: pixel.x, y: pixel.y, color: pixel.color.toLowerCase() };
-    pixels.set(pixelKey(update.x, update.y), update.color);
+    const now = Date.now();
+    const wait = COOLDOWN_MS - (now - (lastPlaced.get(socket.id) || 0));
+    if (wait > 0) return acknowledge(ack, { ok: false, wait });
+    lastPlaced.set(socket.id, now);
+    const update = getPixelUpdate(pixel.x, pixel.y, pixel.color, user);
+    pixels.set(pixel.y * SIZE + pixel.x, update);
     io.emit('update', update);
     saveBoard();
-    reply(cooldown);
+    acknowledge(ack, { ok: true, nextPaintAt: now + COOLDOWN_MS });
   });
 
-  // Image placement is used by the upload controls in public/index.html.
-  socket.on('placeImage', (image, acknowledge) => {
-    const reply = typeof acknowledge === 'function' ? acknowledge : () => {};
-    if (!image || !Number.isInteger(image.x) || !Number.isInteger(image.y) ||
-        !Number.isInteger(image.width) || !Number.isInteger(image.height) ||
-        image.width < 1 || image.width > MAX_IMAGE_SIDE ||
-        image.height < 1 || image.height > MAX_IMAGE_SIDE ||
-        image.x < 0 || image.y < 0 || image.x + image.width > SIZE || image.y + image.height > SIZE ||
-        !Array.isArray(image.pixels) || image.pixels.length !== image.width * image.height ||
-        image.pixels.some(color => color !== null && !isValidColor(color))) {
-      reply({ ok: false, error: `Resim en fazla ${MAX_IMAGE_SIDE}×${MAX_IMAGE_SIDE} piksel olmalı ve haritanın içine sığmalı.` });
-      return;
+  socket.on('placeImage', (image, ack) => {
+    if (!user) return acknowledge(ack, { ok: false, error: 'Resim yerleştirmek için giriş yapmalısın.' });
+    if (!image || !Number.isInteger(image.x) || !Number.isInteger(image.y) || !Number.isInteger(image.width) || !Number.isInteger(image.height) || image.width < 1 || image.width > MAX_IMAGE_SIDE || image.height < 1 || image.height > MAX_IMAGE_SIDE || image.x < 0 || image.y < 0 || image.x + image.width > SIZE || image.y + image.height > SIZE || !Array.isArray(image.pixels) || image.pixels.length !== image.width * image.height || image.pixels.some(color => color !== null && (typeof color !== 'string' || !/^#[0-9a-f]{6}$/i.test(color)))) {
+      return acknowledge(ack, { ok: false, error: `Resim en fazla ${MAX_IMAGE_SIDE}×${MAX_IMAGE_SIDE} piksel olmalı ve haritanın içine sığmalı.` });
     }
-
-    const cooldown = checkCooldown(socket);
-    if (!cooldown.ok) {
-      reply(cooldown);
-      return;
-    }
-
+    const now = Date.now();
+    const wait = COOLDOWN_MS - (now - (lastPlaced.get(socket.id) || 0));
+    if (wait > 0) return acknowledge(ack, { ok: false, wait });
+    lastPlaced.set(socket.id, now);
     const updates = [];
     image.pixels.forEach((color, index) => {
       if (!color) return;
-      const x = image.x + (index % image.width);
+      const x = image.x + index % image.width;
       const y = image.y + Math.floor(index / image.width);
-      const update = { x, y, color: color.toLowerCase() };
-      pixels.set(pixelKey(x, y), update.color);
+      const update = getPixelUpdate(x, y, color, user);
+      pixels.set(y * SIZE + x, update);
       updates.push(update);
     });
-
     io.emit('imageUpdate', updates);
     saveBoard();
-    reply({ ...cooldown, count: updates.length });
+    acknowledge(ack, { ok: true, nextPaintAt: now + COOLDOWN_MS, count: updates.length });
   });
-
   socket.on('disconnect', () => lastPlaced.delete(socket.id));
 });
 
+app.use((error, _req, res, _next) => {
+  console.error(error);
+  res.status(500).json({ error: 'Sunucu hatası oluştu.' });
+});
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, '0.0.0.0', () => console.log(`Server is running on port ${PORT}`));
+server.listen(PORT, '0.0.0.0', () => console.log(`Bonkistan server listening on ${PORT}`));
