@@ -10,8 +10,8 @@ const io = new Server(server, { maxHttpBufferSize: 1e6 });
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
-const WIDTH = 360;
-const HEIGHT = 180;
+const WIDTH = 16000;
+const HEIGHT = 16000;
 const COOLDOWN_MS = 3000;
 const MAX_IMAGE_SIDE = 32;
 const BOARD_FILE = path.join(__dirname, 'data', 'board.json');
