@@ -3,7 +3,6 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#0b1622">
 <title>Bonkistan — Pixel Savaşı</title>
 <style>
   * { box-sizing: border-box; }
@@ -12,368 +11,404 @@
   header b { font-size: 20px; }
   #who { font-size: 13px; color: #8fa6bb; }
   main { flex: 1; display: flex; min-height: 0; }
-  #wrap { flex: 1; position: relative; overflow: hidden; min-height: 240px; }
+  #wrap { flex: 1; position: relative; overflow: hidden; }
   canvas { display: block; width: 100%; height: 100%; cursor: crosshair; touch-action: none; }
-  #info { position: absolute; left: 10px; bottom: 10px; font: 12px monospace; background: rgba(0,0,0,.5); padding: 4px 8px; border-radius: 4px; pointer-events: none; }
+  #info { position: absolute; left: 10px; bottom: 10px; font: 12px monospace; background: rgba(0,0,0,.5); padding: 4px 8px; border-radius: 4px; }
   aside { width: 290px; background: #111d2c; padding: 14px; overflow-y: auto; }
   aside h3 { margin: 16px 0 6px; font-size: 13px; color: #8fa6bb; letter-spacing: .05em; }
   input { width: 100%; padding: 8px; margin: 4px 0; background: #0b1622; border: 1px solid #29405a; color: #e6eef5; border-radius: 6px; }
   button { padding: 8px 10px; margin: 4px 4px 4px 0; background: #2a5d8f; color: #fff; border: 0; border-radius: 6px; cursor: pointer; }
   button:hover { background: #356fa9; }
-  button:disabled { opacity: .55; cursor: wait; }
+  .gbtn { display: block; text-align: center; background: #fff; color: #222; padding: 9px; border-radius: 6px; text-decoration: none; margin: 6px 0; font-weight: 600; }
+  .gbtn:hover { background: #eee; }
   .palette { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
   .sw { height: 34px; border-radius: 6px; border: 2px solid transparent; cursor: pointer; }
   .sw.sel { border-color: #fff; }
-  #status { font-size: 13px; color: #8fa6bb; min-height: 18px; margin-top: 8px; overflow-wrap: anywhere; }
-  .hidden { display: none !important; }
-  .hint { font-size: 12px; color: #8fa6bb; margin: 0 0 6px; }
+  #status { font-size: 13px; color: #f5c770; min-height: 18px; margin-top: 8px; }
+  .hidden { display: none; }
   @media (max-width: 800px) { main { flex-direction: column; } aside { width: auto; max-height: 50%; } }
 </style>
 </head>
 <body>
 <header>
   <b>✦ bonkistan</b>
-  <span id="who">Bağlanıyor…</span>
+  <span id="who"></span>
 </header>
+
 <main>
   <div id="wrap">
     <canvas id="board"></canvas>
     <div id="info"></div>
   </div>
+
   <aside>
-    <div id="authBox">
+    <div id="authBox" class="hidden">
       <h3>GİRİŞ / KAYIT</h3>
-      <input id="name" placeholder="İsim (kayıt için)" autocomplete="name" maxlength="24">
-      <input id="email" type="email" placeholder="E-posta" autocomplete="email">
-      <input id="pass" type="password" placeholder="Şifre (en az 10 karakter)" autocomplete="current-password" minlength="10">
-      <button id="loginBtn" type="button">Giriş yap</button>
-      <button id="registerBtn" type="button">Kayıt ol</button>
-      <button id="googleBtn" type="button" class="hidden">Google ile giriş</button>
+      <a class="gbtn" href="/auth/google">Google ile giriş yap</a>
+      <input id="user" placeholder="Kullanıcı adı (3-20, harf/rakam/_)" autocomplete="username">
+      <input id="pass" type="password" placeholder="Şifre (en az 10 karakter)" autocomplete="current-password">
+      <button onclick="auth('login')">Giriş yap</button>
+      <button onclick="auth('register')">Kayıt ol</button>
     </div>
+
     <div id="userBox" class="hidden">
       <h3>PROFİL</h3>
       <div id="profile"></div>
-      <button id="logoutBtn" type="button">Çıkış yap</button>
+      <button onclick="logout()">Çıkış yap</button>
     </div>
+
     <h3>RENK PALETİ</h3>
     <div class="palette" id="palette"></div>
     <input type="color" id="custom" value="#7cb342" style="height:36px;padding:2px">
+
     <h3>RESİM YÜKLE</h3>
-    <p class="hint">En fazla 100×100 piksele küçültülür. Yükle, haritada bir noktaya tıkla.</p>
+    <p style="font-size:12px;color:#8fa6bb;margin:0 0 6px">En fazla 400×400 piksele küçültülür. Yükle, haritada bir noktaya tıkla.</p>
     <input type="file" id="imgInput" accept="image/*">
-    <button id="cancelImage" type="button">Resmi iptal et</button>
-    <div id="status" role="status" aria-live="polite"></div>
+    <button onclick="cancelImage()">Resmi iptal et</button>
+
+    <div id="status"></div>
   </aside>
 </main>
+
 <script src="/socket.io/socket.io.js"></script>
 <script>
-'use strict';
-(() => {
 const SIZE = 16000;
-const MAX_IMG = 100;
+const COOLDOWN_MS = 3000;
+const MAX_IMG = 400;
 const COLORS = ['#ffffff','#1a1c22','#e53935','#fb8c00','#fdd835',
                 '#7cb342','#2e7d32','#00acc1','#1e88e5','#5e35b1',
                 '#8e24aa','#ec407a','#6d4c41','#90a4ae','#37474f'];
+
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
-const wrap = document.getElementById('wrap');
-const dpr = Math.min(window.devicePixelRatio || 1, 2);
-const pixels = new Map();
-const landPaths = [];
+const dpr = window.devicePixelRatio || 1;
+
 let me = null;
 let socket = null;
 let selected = COLORS[5];
 let view = { scale: 0.05, x: 0, y: 0 };
 let fitted = false;
+const pixels = new Map();
+const landPaths = [];
 let pendingImg = null;
 let hoverWorld = null;
+let queue = [];
+let lastSent = 0;
+let pumpTimer = null;
 let drag = null;
-let nextPaintAt = 0;
 
-function setStatus(message) { document.getElementById('status').textContent = message || ''; }
-async function api(url, body) {
-  const response = await fetch(url, {
+function setStatus(msg) { document.getElementById('status').textContent = msg; }
+
+function openAuth(msg) {
+  document.getElementById('authBox').classList.remove('hidden');
+  document.getElementById('authBox').scrollIntoView({ behavior: 'smooth' });
+  setStatus(msg);
+}
+
+async function api(path, body) {
+  const r = await fetch(path, {
     method: body ? 'POST' : 'GET',
-    headers: body ? { 'Content-Type': 'application/json' } : {},
+    headers: { 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,
   });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(result.error || 'İstek başarısız oldu.');
-  return result;
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || 'Hata');
+  return j;
 }
 
-function setUser(user) {
-  me = user;
-  document.getElementById('authBox').classList.toggle('hidden', !!user);
-  document.getElementById('userBox').classList.toggle('hidden', !user);
-  document.getElementById('who').textContent = user ? `Merhaba, ${user.name}` : 'Piksel koymak için giriş yap';
-  document.getElementById('profile').textContent = user ? `${user.name}${user.email ? ` · ${user.email}` : ''}` : '';
-}
-async function login() {
+async function auth(kind) {
   try {
-    const result = await api('/api/login', { email: document.getElementById('email').value, password: document.getElementById('pass').value });
-    setUser(result.user);
-    setStatus('Giriş başarılı.');
-    if (socket) socket.disconnect();
-    connect();
-  } catch (error) { setStatus(error.message); }
-}
-async function register() {
-  try {
-    const result = await api('/api/register', {
-      name: document.getElementById('name').value,
-      email: document.getElementById('email').value,
+    await api('/api/' + kind, {
+      username: document.getElementById('user').value,
       password: document.getElementById('pass').value,
     });
-    setUser(result.user);
-    setStatus('Kayıt başarılı.');
-    if (socket) socket.disconnect();
-    connect();
-  } catch (error) { setStatus(error.message); }
+    location.href = '/';
+  } catch (e) { setStatus(e.message); }
 }
-async function logout() {
-  try {
-    await api('/api/logout', {});
-    setUser(null);
-    if (socket) socket.disconnect();
-    connect();
-    setStatus('Çıkış yapıldı.');
-  } catch (error) { setStatus(error.message); }
-}
-document.getElementById('loginBtn').addEventListener('click', login);
-document.getElementById('registerBtn').addEventListener('click', register);
-document.getElementById('logoutBtn').addEventListener('click', logout);
-document.getElementById('googleBtn').addEventListener('click', () => { location.href = '/auth/google'; });
 
-function proj(lon, lat) { return [(lon + 180) / 360 * SIZE, (90 - lat) / 180 * SIZE]; }
-function addLand(rings) {
-  const path = new Path2D();
-  for (const ring of rings) {
-    let offset = 0, previous = null;
-    ring.forEach(([lon, lat], index) => {
-      if (previous !== null) {
-        if (lon - previous > 180) offset -= 360;
-        else if (previous - lon > 180) offset += 360;
+async function logout() {
+  await api('/api/logout', {});
+  location.href = '/';
+}
+
+// ---------- Dünya haritası ----------
+function proj(lon, lat) {
+  return [(lon + 180) / 360 * SIZE, (90 - lat) / 180 * SIZE];
+}
+
+function buildLand(gj) {
+  for (const f of gj.features) {
+    const g = f.geometry;
+    if (!g) continue;
+    const polys = g.type === 'Polygon' ? [g.coordinates]
+                : g.type === 'MultiPolygon' ? g.coordinates : [];
+    const path = new Path2D();
+    for (const poly of polys) {
+      for (const ring of poly) {
+        let off = 0, prev = null;
+        ring.forEach(([lon, lat], i) => {
+          if (prev !== null) {
+            if (lon - prev > 180) off -= 360;
+            else if (prev - lon > 180) off += 360;
+          }
+          prev = lon;
+          const [x, y] = proj(lon + off, lat);
+          i ? path.lineTo(x, y) : path.moveTo(x, y);
+        });
+        path.closePath();
       }
-      previous = lon;
-      const [x, y] = proj(lon + offset, lat);
-      if (index) path.lineTo(x, y); else path.moveTo(x, y);
-    });
-    path.closePath();
+    }
+    landPaths.push(path);
   }
-  landPaths.push(path);
-}
-function addFallbackLand() {
-  // Coarse fallback shapes keep the board usable when no GeoJSON is deployed.
-  addLand([[[-168,70],[-150,72],[-137,69],[-130,58],[-124,50],[-124,40],[-117,32],[-106,29],[-100,20],[-90,18],[-83,25],[-80,32],[-74,40],[-66,45],[-60,52],[-80,58],[-100,65],[-125,72],[-150,73]]]);
-  addLand([[[-81,12],[-70,10],[-58,5],[-48,-2],[-38,-10],[-42,-23],[-50,-33],[-58,-35],[-68,-55],[-75,-40],[-78,-20]]]);
-  addLand([[[-11,36],[0,43],[10,46],[20,55],[32,60],[45,55],[58,52],[70,58],[90,55],[110,50],[130,53],[145,48],[160,60],[178,55],[160,43],[145,38],[130,32],[120,20],[110,10],[104,0],[112,-10],[130,-12],[145,-20],[153,-28],[145,-39],[132,-35],[116,-32],[110,-22],[100,-15],[88,-10],[78,-5],[68,8],[58,22],[48,30],[38,35],[28,38],[20,35],[10,36],[0,35]]]);
-  addLand([[-17,36],[-5,37],[10,35],[25,32],[34,20],[43,11],[50,0],[42,-12],[35,-25],[25,-34],[15,-35],[10,-20],[3,-5],[-5,5],[-12,15],[-17,25]].map(point => point));
-  addLand([[[-52,60],[-42,62],[-35,70],[-42,80],[-54,83],[-62,75]]]);
-}
-function buildLand(geojson) {
-  for (const feature of geojson.features || []) {
-    const geometry = feature.geometry;
-    if (!geometry) continue;
-    const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.type === 'MultiPolygon' ? geometry.coordinates : [];
-    for (const polygon of polygons) addLand(polygon);
-  }
-  if (!landPaths.length) addFallbackLand();
   draw();
 }
 
+// ---------- Çizim ----------
 function fitView() {
-  const width = canvas.clientWidth, height = canvas.clientHeight;
-  view.scale = Math.min(width / SIZE, height / SIZE) * 0.95;
-  view.x = (width - SIZE * view.scale) / 2;
-  view.y = (height - SIZE * view.scale) / 2;
+  const W = canvas.clientWidth, H = canvas.clientHeight;
+  view.scale = Math.min(W / SIZE, H / SIZE) * 0.95;
+  view.x = (W - SIZE * view.scale) / 2;
+  view.y = (H - SIZE * view.scale) / 2;
 }
+
 function resize() {
-  const rect = wrap.getBoundingClientRect();
-  canvas.width = Math.max(1, Math.round(rect.width * dpr));
-  canvas.height = Math.max(1, Math.round(rect.height * dpr));
+  canvas.width = canvas.clientWidth * dpr;
+  canvas.height = canvas.clientHeight * dpr;
   if (!fitted) { fitView(); fitted = true; }
   draw();
 }
+
 function draw() {
-  if (!ctx) return;
-  const width = canvas.width / dpr, height = canvas.height / dpr;
+  const W = canvas.clientWidth, H = canvas.clientHeight;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.fillStyle = '#0f2236'; ctx.fillRect(0, 0, width, height);
+  ctx.fillStyle = '#0f2236';
+  ctx.fillRect(0, 0, W, H);
+
   ctx.setTransform(dpr * view.scale, 0, 0, dpr * view.scale, dpr * view.x, dpr * view.y);
-  ctx.fillStyle = '#132c44'; ctx.fillRect(0, 0, SIZE, SIZE);
+
+  ctx.fillStyle = '#132c44';
+  ctx.fillRect(0, 0, SIZE, SIZE);
+
   ctx.fillStyle = '#4a8a72';
-  for (const path of landPaths) ctx.fill(path);
-  ctx.strokeStyle = '#a6dcc2'; ctx.lineWidth = 1 / view.scale;
-  for (const path of landPaths) ctx.stroke(path);
+  for (const p of landPaths) ctx.fill(p, 'nonzero');
+  ctx.strokeStyle = '#a6dcc2';
+  ctx.lineWidth = 1 / view.scale;
+  for (const p of landPaths) ctx.stroke(p);
+
   const x0 = -view.x / view.scale, y0 = -view.y / view.scale;
-  const x1 = x0 + width / view.scale, y1 = y0 + height / view.scale;
-  for (const [key, pixel] of pixels) {
-    const x = key % SIZE, y = Math.floor(key / SIZE);
+  const x1 = x0 + W / view.scale, y1 = y0 + H / view.scale;
+
+  for (const [k, p] of pixels) {
+    const x = k % SIZE, y = (k - x) / SIZE;
     if (x < x0 || x > x1 || y < y0 || y > y1) continue;
-    ctx.fillStyle = typeof pixel === 'string' ? pixel : pixel.color;
+    ctx.fillStyle = p.c;
     ctx.fillRect(x, y, 1, 1);
   }
+
   if (pendingImg && hoverWorld) {
     ctx.globalAlpha = 0.6;
-    pendingImg.data.forEach(point => { ctx.fillStyle = point.color; ctx.fillRect(hoverWorld.x + point.dx, hoverWorld.y + point.dy, 1, 1); });
+    for (const d of pendingImg.data) {
+      ctx.fillStyle = d.color;
+      ctx.fillRect(hoverWorld.x + d.dx, hoverWorld.y + d.dy, 1, 1);
+    }
     ctx.globalAlpha = 1;
   }
-  ctx.strokeStyle = '#2d4d6b'; ctx.lineWidth = 2 / view.scale; ctx.strokeRect(0, 0, SIZE, SIZE);
+
+  ctx.strokeStyle = '#2d4d6b';
+  ctx.lineWidth = 2 / view.scale;
+  ctx.strokeRect(0, 0, SIZE, SIZE);
 }
-function screenToWorld(sx, sy) { return { x: Math.floor((sx - view.x) / view.scale), y: Math.floor((sy - view.y) / view.scale) }; }
-function inBounds(point) { return point && point.x >= 0 && point.y >= 0 && point.x < SIZE && point.y < SIZE; }
+
+function screenToWorld(sx, sy) {
+  return { x: Math.floor((sx - view.x) / view.scale), y: Math.floor((sy - view.y) / view.scale) };
+}
+
+function inBounds(w) { return w && w.x >= 0 && w.y >= 0 && w.x < SIZE && w.y < SIZE; }
+
 function updateInfo() {
-  let extra = '';
+  let t = '';
   if (inBounds(hoverWorld)) {
-    const pixel = pixels.get(hoverWorld.y * SIZE + hoverWorld.x);
-    const owner = pixel && typeof pixel === 'object' ? pixel.ownerName : null;
-    extra = ` · (${hoverWorld.x}, ${hoverWorld.y}) · ${owner ? `sahibi: ${owner}` : pixel ? 'boyalı' : 'boş'}`;
+    const p = pixels.get(hoverWorld.y * SIZE + hoverWorld.x);
+    t = ` · (${hoverWorld.x}, ${hoverWorld.y})` + (p ? ` · sahibi: ${p.o}` : ' · boş');
   }
-  document.getElementById('info').textContent = `${pixels.size} boyalı piksel${extra}`;
-}
-function setSelected(color) {
-  selected = color;
-  document.querySelectorAll('.sw').forEach(element => element.classList.toggle('sel', element.dataset.color === selected));
-}
-const palette = document.getElementById('palette');
-COLORS.forEach(color => {
-  const swatch = document.createElement('button');
-  swatch.type = 'button'; swatch.className = 'sw'; swatch.dataset.color = color;
-  swatch.style.background = color; swatch.setAttribute('aria-label', `Renk ${color}`);
-  swatch.addEventListener('click', () => setSelected(color));
-  palette.appendChild(swatch);
-});
-document.getElementById('custom').addEventListener('input', event => setSelected(event.target.value));
-setSelected(selected);
-
-function handleAck(result) {
-  if (!result || !result.ok) {
-    if (result && result.wait) {
-      nextPaintAt = Date.now() + result.wait;
-      const seconds = Math.ceil(result.wait / 1000);
-      setStatus(`Biraz bekle (${seconds} sn).`);
-    } else setStatus(result && result.error || 'Piksel gönderilemedi.');
-    return false;
-  }
-  nextPaintAt = result.nextPaintAt || Date.now() + 3000;
-  setStatus(result.count !== undefined ? `${result.count} piksel yerleştirildi.` : 'Piksel yerleştirildi.');
-  return true;
-}
-function placeAt(point) {
-  if (!me) { setStatus('Piksel koymak için giriş yap.'); return; }
-  if (!inBounds(point) || !socket || !socket.connected) { setStatus('Sunucuya bağlantı yok.'); return; }
-  if (Date.now() < nextPaintAt) { setStatus(`Biraz bekle (${Math.ceil((nextPaintAt - Date.now()) / 1000)} sn).`); return; }
-  if (pendingImg) {
-    const width = pendingImg.width, height = pendingImg.height;
-    if (point.x + width > SIZE || point.y + height > SIZE) { setStatus('Resim tahta sınırlarına sığmalı.'); return; }
-    const colors = new Array(width * height).fill(null);
-    pendingImg.data.forEach(pixel => { colors[pixel.dy * width + pixel.dx] = pixel.color; });
-    socket.emit('placeImage', { x: point.x, y: point.y, width, height, pixels: colors }, result => {
-      if (handleAck(result)) { pendingImg = null; document.getElementById('imgInput').value = ''; draw(); }
-    });
-  } else {
-    socket.emit('place', { x: point.x, y: point.y, color: selected }, handleAck);
-  }
+  document.getElementById('info').textContent = `${pixels.size} boyalı piksel${t}`;
 }
 
-canvas.addEventListener('pointerdown', event => {
-  drag = { x: event.clientX, y: event.clientY, viewX: view.x, viewY: view.y, moved: false };
-  canvas.setPointerCapture(event.pointerId);
+// ---------- Fare ----------
+canvas.addEventListener('pointerdown', (e) => {
+  drag = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, moved: false };
+  canvas.setPointerCapture(e.pointerId);
 });
-canvas.addEventListener('pointermove', event => {
-  const rect = canvas.getBoundingClientRect();
-  hoverWorld = screenToWorld(event.clientX - rect.left, event.clientY - rect.top);
+
+canvas.addEventListener('pointermove', (e) => {
+  const r = canvas.getBoundingClientRect();
+  hoverWorld = screenToWorld(e.clientX - r.left, e.clientY - r.top);
   if (drag) {
-    const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     if (Math.hypot(dx, dy) > 4) drag.moved = true;
-    if (drag.moved) { view.x = drag.viewX + dx; view.y = drag.viewY + dy; }
+    if (drag.moved) { view.x = drag.vx + dx; view.y = drag.vy + dy; }
   }
-  updateInfo(); draw();
+  updateInfo();
+  draw();
 });
-canvas.addEventListener('pointerup', () => { if (drag && !drag.moved) placeAt(hoverWorld); drag = null; });
-canvas.addEventListener('pointercancel', () => { drag = null; });
-canvas.addEventListener('pointerleave', () => { if (!drag) { hoverWorld = null; updateInfo(); draw(); } });
-canvas.addEventListener('wheel', event => {
-  event.preventDefault();
-  const rect = canvas.getBoundingClientRect(), sx = event.clientX - rect.left, sy = event.clientY - rect.top;
-  const factor = event.deltaY < 0 ? 1.15 : 1 / 1.15;
-  const nextScale = Math.min(Math.max(view.scale * factor, 0.01), 2);
-  view.x = sx - (sx - view.x) * (nextScale / view.scale);
-  view.y = sy - (sy - view.y) * (nextScale / view.scale);
-  view.scale = nextScale; draw();
+
+canvas.addEventListener('pointerup', () => {
+  if (drag && !drag.moved) placeAt(hoverWorld);
+  drag = null;
+});
+
+canvas.addEventListener('pointerleave', () => { hoverWorld = null; updateInfo(); draw(); });
+
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const r = canvas.getBoundingClientRect();
+  const sx = e.clientX - r.left, sy = e.clientY - r.top;
+  const f = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+  const ns = Math.min(Math.max(view.scale * f, 0.01), 2);
+  view.x = sx - (sx - view.x) * (ns / view.scale);
+  view.y = sy - (sy - view.y) * (ns / view.scale);
+  view.scale = ns;
+  draw();
 }, { passive: false });
 
-function cancelImage() {
-  pendingImg = null; document.getElementById('imgInput').value = '';
-  setStatus('Resim iptal edildi.'); draw();
+// ---------- Piksel gönderme ----------
+function placeAt(w) {
+  if (!me || !me.username) {
+    return openAuth('Piksel koymak için önce giriş yap veya Google ile devam et.');
+  }
+  if (!inBounds(w)) return;
+
+  if (pendingImg) {
+    const list = pendingImg.data
+      .map((d) => ({ x: w.x + d.dx, y: w.y + d.dy, color: d.color }))
+      .filter((p) => p.x >= 0 && p.y >= 0 && p.x < SIZE && p.y < SIZE);
+    enqueue(list);
+    const hrs = (list.length * COOLDOWN_MS / 3600000).toFixed(1);
+    setStatus(`${list.length} piksel sıraya alındı. Tahmini süre: ${hrs} saat.`);
+    pendingImg = null;
+    draw();
+  } else {
+    enqueue([{ x: w.x, y: w.y, color: selected }]);
+  }
 }
-document.getElementById('cancelImage').addEventListener('click', cancelImage);
-document.getElementById('imgInput').addEventListener('change', event => {
-  const file = event.target.files && event.target.files[0];
+
+function enqueue(list) {
+  queue.push(...list);
+  pump();
+}
+
+function pump() {
+  if (pumpTimer || queue.length === 0) return;
+  const wait = Math.max(0, lastSent + COOLDOWN_MS + 50 - Date.now());
+  pumpTimer = setTimeout(() => {
+    pumpTimer = null;
+    const p = queue.shift();
+    if (!p) return;
+    socket.emit('place', p);
+    lastSent = Date.now();
+    if (queue.length) setStatus(`Sırada ${queue.length} piksel var.`);
+    pump();
+  }, wait);
+}
+
+// ---------- Renk paleti ----------
+function markSel() {
+  document.querySelectorAll('.sw').forEach((el) =>
+    el.classList.toggle('sel', el.dataset.c === selected));
+}
+
+const pal = document.getElementById('palette');
+COLORS.forEach((c) => {
+  const d = document.createElement('div');
+  d.className = 'sw';
+  d.dataset.c = c;
+  d.style.background = c;
+  d.onclick = () => { selected = c; markSel(); };
+  pal.appendChild(d);
+});
+document.getElementById('custom').addEventListener('input', (e) => {
+  selected = e.target.value; markSel();
+});
+markSel();
+
+// ---------- Resim yükleme (en fazla 400×400) ----------
+document.getElementById('imgInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
   if (!file) return;
-  if (!file.type.startsWith('image/')) { setStatus('Lütfen bir resim dosyası seç.'); event.target.value = ''; return; }
-  const url = URL.createObjectURL(file), image = new Image();
-  image.onload = () => {
-    URL.revokeObjectURL(url);
-    const factor = Math.min(MAX_IMG / image.width, MAX_IMG / image.height, 1);
-    const width = Math.max(1, Math.round(image.width * factor));
-    const height = Math.max(1, Math.round(image.height * factor));
-    const offscreen = document.createElement('canvas'); offscreen.width = width; offscreen.height = height;
-    const imageContext = offscreen.getContext('2d', { willReadFrequently: true });
-    imageContext.drawImage(image, 0, 0, width, height);
-    const rgba = imageContext.getImageData(0, 0, width, height).data, data = [];
-    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
-      const index = (y * width + x) * 4;
-      if (rgba[index + 3] < 128) continue;
-      const color = '#' + [rgba[index], rgba[index + 1], rgba[index + 2]].map(value => value.toString(16).padStart(2, '0')).join('');
-      data.push({ dx: x, dy: y, color });
+  const img = new Image();
+  img.onload = () => {
+    const s = Math.min(MAX_IMG / img.width, MAX_IMG / img.height, 1);
+    const w = Math.max(1, Math.round(img.width * s));
+    const h = Math.max(1, Math.round(img.height * s));
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const cx = c.getContext('2d');
+    cx.drawImage(img, 0, 0, w, h);
+    const d = cx.getImageData(0, 0, w, h).data;
+    const data = [];
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      if (d[i + 3] < 128) continue;
+      const hex = '#' + [d[i], d[i + 1], d[i + 2]].map((v) => v.toString(16).padStart(2, '0')).join('');
+      data.push({ dx: x, dy: y, color: hex });
     }
-    pendingImg = { width, height, data };
-    setStatus(`Resim hazır (${data.length} piksel). Haritada başlangıç noktasına tıkla.`);
+    pendingImg = { w, h, data };
+    URL.revokeObjectURL(img.src);
+    setStatus(`Resim hazır (${w}×${h}, ${data.length} piksel). Haritada bir noktaya tıkla.`);
     draw();
   };
-  image.onerror = () => { URL.revokeObjectURL(url); setStatus('Resim açılamadı.'); };
-  image.src = url;
+  img.src = URL.createObjectURL(file);
 });
 
+function cancelImage() {
+  pendingImg = null;
+  document.getElementById('imgInput').value = '';
+  setStatus('Resim iptal edildi.');
+  draw();
+}
+
+// ---------- Socket ----------
 function connect() {
   socket = io();
-  socket.on('connect', () => { if (me) setStatus('Bağlandı.'); });
-  socket.on('connect_error', () => setStatus('Sunucuya bağlanılamadı.'));
-  socket.on('init', data => {
+  socket.on('init', ({ pixels: list }) => {
     pixels.clear();
-    for (const [key, value] of (data && data.pixels) || []) pixels.set(Number(key), value);
+    for (const [k, c, o] of list) pixels.set(k, { c, o });
     updateInfo(); draw();
   });
-  socket.on('update', pixel => {
-    if (!pixel || !Number.isInteger(pixel.x) || !Number.isInteger(pixel.y)) return;
-    pixels.set(pixel.y * SIZE + pixel.x, pixel); updateInfo(); draw();
-  });
-  socket.on('imageUpdate', updates => {
-    for (const pixel of updates || []) if (pixel && Number.isInteger(pixel.x) && Number.isInteger(pixel.y)) pixels.set(pixel.y * SIZE + pixel.x, pixel);
+  socket.on('update', ({ x, y, color, owner }) => {
+    pixels.set(y * SIZE + x, { c: color, o: owner });
     updateInfo(); draw();
+  });
+  socket.on('error_msg', (msg) => {
+    setStatus(msg);
+    if (/giriş/i.test(msg)) document.getElementById('authBox').classList.remove('hidden');
   });
 }
 
+// ---------- Açılış ----------
 async function boot() {
-  try {
-    const result = await api('/api/me');
-    setUser(result.user || null);
-    document.getElementById('googleBtn').classList.toggle('hidden', !result.googleEnabled);
-  } catch (error) {
-    setUser(null); setStatus(`Oturum bilgisi alınamadı: ${error.message}`);
+  me = await api('/api/me');
+  if (me.username) {
+    document.getElementById('userBox').classList.remove('hidden');
+    document.getElementById('profile').textContent = `${me.username} · ${me.placed} piksel koydun`;
+    document.getElementById('who').textContent = `Merhaba, ${me.username}`;
+  } else {
+    document.getElementById('authBox').classList.remove('hidden');
+    document.getElementById('who').textContent = 'Piksel koymak için giriş yap';
   }
+
+  if (new URLSearchParams(location.search).get('auth') === 'fail')
+    setStatus('Google girişi başarısız oldu. Tekrar dene.');
+
   connect();
   window.addEventListener('resize', resize);
   resize();
-  fetch('/world.geojson').then(response => {
-    if (!response.ok) throw new Error('GeoJSON bulunamadı');
-    return response.json();
-  }).then(buildLand).catch(() => { addFallbackLand(); draw(); });
+
+  fetch('/world.geojson').then((r) => r.json()).then(buildLand)
+    .catch(() => setStatus('world.geojson yüklenemedi.'));
 }
+
 boot();
-})();
 </script>
 </body>
 </html>
