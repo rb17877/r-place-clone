@@ -213,4 +213,111 @@ app.post('/api/login', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-app.post('/api/logout',
+app.post('/api/logout', (req, res, next) => {
+  req.session.destroy(error => {
+    if (error) return next(error);
+    res.clearCookie('connect.sid', { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' });
+    res.json({ ok: true });
+  });
+});
+
+if (googleConfigured) {
+  app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'], state: true }));
+  app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: '/?authError=google' }),
+    async (req, res, next) => {
+      try {
+        const user = req.user;
+        await regenerateSession(req);
+        req.session.userId = user.id;
+        await saveSession(req);
+        res.redirect('/');
+      } catch (error) { next(error); }
+    });
+} else {
+  app.get('/auth/google', (_req, res) =>
+    res.status(503).send('Google girişi için GOOGLE_CLIENT_ID ve GOOGLE_CLIENT_SECRET ayarlanmalı.'));
+}
+
+app.use(express.static(path.join(__dirname, 'public')));
+app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+
+io.engine.use(sessionMiddleware);
+
+const lastPlaced = new Map();
+const ack = (callback, result) => { if (typeof callback === 'function') callback(result); };
+
+io.on('connection', socket => {
+  const user = findUser(socket.request.session?.userId);
+  socket.emit('init', { size: SIZE, pixels: [...pixels] });
+
+  socket.on('place', (pixel, callback) => {
+    if (!user) return ack(callback, { ok: false, error: 'Piksel boyamak için giriş yapmalısın.' });
+    if (!pixel || !Number.isInteger(pixel.x) || !Number.isInteger(pixel.y) ||
+        pixel.x < 0 || pixel.y < 0 || pixel.x >= SIZE || pixel.y >= SIZE ||
+        typeof pixel.color !== 'string' || !/^#[0-9a-f]{6}$/i.test(pixel.color)) {
+      return ack(callback, { ok: false, error: 'Piksel bilgisi geçersiz.' });
+    }
+
+    const now = Date.now();
+    const wait = COOLDOWN_MS - (now - (lastPlaced.get(socket.id) || 0));
+    if (wait > 0) return ack(callback, { ok: false, wait });
+
+    lastPlaced.set(socket.id, now);
+
+    const update = {
+      x: pixel.x, y: pixel.y,
+      color: pixel.color.toLowerCase(),
+      ownerId: user.id, ownerName: user.name,
+      updatedAt: now
+    };
+    pixels.set(pixel.y * SIZE + pixel.x, update);
+    io.emit('update', update);
+    saveBoard();
+    ack(callback, { ok: true, nextPaintAt: now + COOLDOWN_MS });
+  });
+
+  socket.on('placeImage', (image, callback) => {
+    if (!user) return ack(callback, { ok: false, error: 'Resim yerleştirmek için giriş yapmalısın.' });
+    if (!image || !Number.isInteger(image.x) || !Number.isInteger(image.y) ||
+        !Number.isInteger(image.width) || !Number.isInteger(image.height) ||
+        image.width < 1 || image.width > MAX_IMAGE_SIDE ||
+        image.height < 1 || image.height > MAX_IMAGE_SIDE ||
+        image.x < 0 || image.y < 0 ||
+        image.x + image.width > SIZE || image.y + image.height > SIZE ||
+        !Array.isArray(image.pixels) ||
+        image.pixels.length !== image.width * image.height ||
+        image.pixels.some(color => color !== null && (typeof color !== 'string' || !/^#[0-9a-f]{6}$/i.test(color)))) {
+      return ack(callback, { ok: false, error: 'Resim geçersiz veya harita sınırlarının dışında.' });
+    }
+
+    const now = Date.now();
+    const wait = COOLDOWN_MS - (now - (lastPlaced.get(socket.id) || 0));
+    if (wait > 0) return ack(callback, { ok: false, wait });
+
+    lastPlaced.set(socket.id, now);
+
+    const updates = [];
+    image.pixels.forEach((color, index) => {
+      if (!color) return;
+      const x = image.x + index % image.width;
+      const y = image.y + Math.floor(index / image.width);
+      const update = { x, y, color: color.toLowerCase(), ownerId: user.id, ownerName: user.name, updatedAt: now };
+      pixels.set(y * SIZE + x, update);
+      updates.push(update);
+    });
+
+    io.emit('imageUpdate', updates);
+    saveBoard();
+    ack(callback, { ok: true, nextPaintAt: now + COOLDOWN_MS, count: updates.length });
+  });
+
+  socket.on('disconnect', () => lastPlaced.delete(socket.id));
+});
+
+app.use((error, _req, res, _next) => {
+  console.error(error);
+  res.status(500).json({ error: 'Sunucu hatası oluştu.' });
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, '0.0.0.0', () => console.log(`Bonkistan server listening on ${PORT}`));
