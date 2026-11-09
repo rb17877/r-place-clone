@@ -100,7 +100,7 @@ function publicUser(user) {
 function findUser(id) { return id ? users.get(id) || null : null; }
 
 const sessionSecret = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
-if (!process.env.SESSION_SECRET) console.warn('Set SESSION_SECRET to keep sessions valid across server restarts.');
+if (!process.env.SESSION_SECRET) console.warn('Set SESSION_SECRET env variable.');
 
 const sessionMiddleware = session({
   store: new FileStore({ path: path.join(DATA_DIR, 'sessions'), retries: 0, ttl: 86400 }),
@@ -126,7 +126,7 @@ if (googleConfigured) {
     callbackURL: process.env.GOOGLE_CALLBACK_URL || '/auth/google/callback'
   }, (_accessToken, _refreshToken, profile, done) => {
     const email = profile.emails?.[0]?.value;
-    if (!email) return done(new Error('Google hesabından e-posta alınamadı.'));
+    if (!email) return done(new Error('No email from Google.'));
 
     let user = [...users.values()].find(item =>
       item.googleId === profile.id || item.email?.toLowerCase() === email.toLowerCase()
